@@ -1,0 +1,29 @@
+{
+  "name": "lumi",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lumi AI styling and content community",
+  "packageManager": "pnpm@11.16.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @lumi/api dev",
+    "dev:miniapp": "pnpm --filter @lumi/miniapp dev:weapp",
+    "dev:admin": "pnpm --filter @lumi/admin dev",
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "pnpm -r --if-present run lint",
+    "test": "pnpm -r --if-present run test",
+    "db:generate": "pnpm --filter @lumi/api db:generate",
+    "db:push": "pnpm --filter @lumi/api db:push",
+    "db:migrate": "pnpm --filter @lumi/api db:migrate",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  }
+}

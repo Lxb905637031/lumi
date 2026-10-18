@@ -1,0 +1,26 @@
+{
+  "name": "@lumi/miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:weapp": "taro build --type weapp --watch",
+    "build": "taro build --type weapp",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@lumi/contracts": "workspace:*",
+    "@tarojs/components": "catalog:",
+    "@tarojs/runtime": "catalog:",
+    "@tarojs/taro": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@tarojs/cli": "catalog:",
+    "@tarojs/helper": "catalog:",
+    "@tarojs/plugin-framework-react": "catalog:",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "catalog:"
+  }
+}

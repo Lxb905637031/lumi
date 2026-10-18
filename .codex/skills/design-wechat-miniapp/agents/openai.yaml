@@ -1,0 +1,4 @@
+interface:
+  display_name: "微信小程序 UI/UX"
+  short_description: "完成微信小程序 UX、知识卡动画、高保真实现与双端验收"
+  default_prompt: "使用 $design-wechat-miniapp 为这个微信小程序完成 UX、知识卡动画、高保真实现与双端真机验收。"

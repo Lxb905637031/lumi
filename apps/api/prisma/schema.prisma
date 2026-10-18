@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum GenerationJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REMOVED
+}
+
+model User {
+  id          String     @id @default(cuid())
+  wxOpenId    String     @unique @map("wx_open_id")
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  profiles    BodyProfile[]
+  assets      MediaAsset[]
+  jobs        GenerationJob[]
+  posts       Post[]
+  comments    Comment[]
+
+  @@map("users")
+}
+
+model BodyProfile {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  name          String
+  activeVersion Int      @default(1) @map("active_version")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions      BodyProfileVersion[]
+
+  @@index([userId, updatedAt])
+  @@map("body_profiles")
+}
+
+model BodyProfileVersion {
+  id          String   @id @default(cuid())
+  profileId   String   @map("profile_id")
+  version     Int
+  measurements Json
+  sourceAssetId String? @map("source_asset_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  profile     BodyProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  jobs        GenerationJob[]
+
+  @@unique([profileId, version])
+  @@map("body_profile_versions")
+}
+
+model MediaAsset {
+  id          String   @id @default(cuid())
+  ownerId     String   @map("owner_id")
+  objectKey   String   @unique @map("object_key")
+  mimeType    String   @map("mime_type")
+  byteSize    Int      @map("byte_size")
+  sha256      String
+  visibility  String   @default("PRIVATE")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@map("media_assets")
+}
+
+model GenerationJob {
+  id               String             @id @default(cuid())
+  userId           String             @map("user_id")
+  profileVersionId String             @map("profile_version_id")
+  clothingAssetId  String             @map("clothing_asset_id")
+  idempotencyKey   String             @map("idempotency_key")
+  status           GenerationJobStatus @default(QUEUED)
+  provider         String             @default("mock")
+  retryCount       Int                @default(0) @map("retry_count")
+  errorCode        String?            @map("error_code")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileVersion   BodyProfileVersion @relation(fields: [profileVersionId], references: [id])
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, status, createdAt])
+  @@map("generation_jobs")
+}
+
+model Post {
+  id               String           @id @default(cuid())
+  authorId         String           @map("author_id")
+  title            String
+  body             String
+  moderationStatus ModerationStatus @default(PENDING) @map("moderation_status")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  author           User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments         Comment[]
+
+  @@index([moderationStatus, createdAt])
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  authorId  String   @map("author_id")
+  body      String
+  parentId  String?  @map("parent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}

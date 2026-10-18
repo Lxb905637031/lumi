@@ -1,0 +1,4 @@
+interface:
+  display_name: "NutUI React Taro"
+  short_description: "Build Taro pages with NutUI React."
+  default_prompt: "Use $nutui-react-taro to choose NutUI React Taro components and implement a Taro mini-program page."
