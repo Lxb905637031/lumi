@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js",
+    "dev": "nest start --watch --entryFile ../apps/api/src/main",
+    "build": "nest build",
+    "start": "node dist/apps/api/src/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test",
+    "test:integration": "node tests/integration-smoke.mjs",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
     "db:push": "prisma db push --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma"
@@ -17,6 +18,7 @@
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
+    "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-fastify": "catalog:",
     "@prisma/client": "catalog:",
     "class-transformer": "catalog:",
@@ -26,6 +28,7 @@
     "rxjs": "catalog:"
   },
   "devDependencies": {
+    "@nestjs/cli": "catalog:",
     "@nestjs/testing": "catalog:",
     "prisma": "catalog:",
     "tsx": "catalog:"

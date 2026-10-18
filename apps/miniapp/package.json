@@ -11,14 +11,20 @@
     "@lumi/contracts": "workspace:*",
     "@tarojs/components": "catalog:",
     "@tarojs/runtime": "catalog:",
+    "@tarojs/shared": "catalog:",
     "@tarojs/taro": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@babel/preset-react": "catalog:",
+    "babel-preset-taro": "catalog:",
     "@tarojs/cli": "catalog:",
     "@tarojs/helper": "catalog:",
+    "@tarojs/plugin-platform-weapp": "catalog:",
     "@tarojs/plugin-framework-react": "catalog:",
+    "@tarojs/react": "catalog:",
+    "@tarojs/webpack5-runner": "catalog:",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "typescript": "catalog:"

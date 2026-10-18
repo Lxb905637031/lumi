@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
@@ -9,7 +10,17 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter({ logger: true }),
   );
+  const config = app.get(ConfigService);
   app.setGlobalPrefix('api/v1');
+  const allowedOrigins = config.getOrThrow<string>('CORS_ORIGINS')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  app.enableCors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -18,7 +29,7 @@ async function bootstrap() {
     }),
   );
   app.enableShutdownHooks();
-  await app.listen(Number(process.env.PORT ?? 4300), '0.0.0.0');
+  await app.listen(config.getOrThrow<number>('PORT'), '0.0.0.0');
 }
 
 void bootstrap();

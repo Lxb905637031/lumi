@@ -39,8 +39,22 @@ model User {
   jobs        GenerationJob[]
   posts       Post[]
   comments    Comment[]
+  sessions    UserSession[]
+  clothingItems ClothingItem[]
 
   @@map("users")
+}
+
+model UserSession {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  refreshTokenHash String   @map("refresh_token_hash")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("user_sessions")
 }
 
 model BodyProfile {
@@ -87,6 +101,21 @@ model MediaAsset {
   @@map("media_assets")
 }
 
+model ClothingItem {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  name       String
+  category   String
+  assetId    String?  @map("asset_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs       GenerationJob[]
+
+  @@index([userId, updatedAt])
+  @@map("clothing_items")
+}
+
 model GenerationJob {
   id               String             @id @default(cuid())
   userId           String             @map("user_id")
@@ -101,10 +130,24 @@ model GenerationJob {
   updatedAt        DateTime           @updatedAt @map("updated_at")
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   profileVersion   BodyProfileVersion @relation(fields: [profileVersionId], references: [id])
+  clothingAsset    ClothingItem      @relation(fields: [clothingAssetId], references: [id])
+  outputs          GenerationOutput[]
 
   @@unique([userId, idempotencyKey])
   @@index([userId, status, createdAt])
   @@map("generation_jobs")
+}
+
+model GenerationOutput {
+  id          String   @id @default(cuid())
+  jobId       String   @map("job_id")
+  assetId     String   @map("asset_id")
+  selectedAt  DateTime? @map("selected_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  job         GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+  @@map("generation_outputs")
 }
 
 model Post {

@@ -1,5 +1,7 @@
 import { View, Text, Button } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import { useState } from 'react';
+import { api, type GenerationJob } from '../../services/api';
 import './index.scss';
 
 const highlights = [
@@ -9,6 +11,38 @@ const highlights = [
 
 export default function Index() {
   const [active, setActive] = useState('推荐');
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState('');
+
+  const startTryOn = async () => {
+    if (busy) return;
+    setBusy(true);
+    setStatus('正在连接 Lumi…');
+    try {
+      await api.login();
+      const profiles = await api.listProfiles();
+      const profile = profiles[0] ?? (await api.createProfile({ name: '我的默认档案', heightCm: 165, weightKg: 52 }));
+      const profileVersionId = profiles[0]?.versions[0]?.id ?? profile.id;
+      const clothing = (await api.listClothing())[0] ?? (await api.createClothing({ name: '日常上装', category: 'TOP' }));
+      const job = await api.createGeneration({
+        profileVersionId,
+        clothingAssetId: clothing.id,
+        idempotencyKey: `demo-${Date.now()}`,
+      });
+      let latest: GenerationJob = job;
+      for (let attempt = 0; attempt < 6 && (latest.status === 'QUEUED' || latest.status === 'RUNNING'); attempt += 1) {
+        setStatus(attempt === 0 ? '任务已创建，正在生成…' : `生成中（${attempt}/5）…`);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        latest = await api.getGeneration(job.id);
+      }
+      setStatus(latest.status === 'SUCCEEDED' ? '试穿完成，结果已保存到生成记录。' : `任务状态：${latest.status}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '暂时无法完成试穿，请稍后重试');
+      Taro.showToast({ title: '试穿失败', icon: 'none' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <View className="page">
@@ -51,7 +85,10 @@ export default function Index() {
         <View className="empty-state">
           <Text className="empty-title">开始你的第一次试穿</Text>
           <Text className="empty-copy">上传人物照和一件衣物，我们会生成一张静态参考图。</Text>
-          <Button className="primary-button">创建身材档案</Button>
+          <Button className="primary-button" loading={busy} disabled={busy} onClick={startTryOn}>
+            {busy ? '生成中' : '开始免费试穿'}
+          </Button>
+          {status && <Text className="status-copy">{status}</Text>}
         </View>
       )}
 
@@ -59,7 +96,7 @@ export default function Index() {
         <View className="empty-state">
           <Text className="empty-title">登录后管理你的资料</Text>
           <Text className="empty-copy">你的身材档案、衣物和生成结果都会保存在这里。</Text>
-          <Button className="primary-button">微信登录</Button>
+          <Button className="primary-button" onClick={() => setActive('试穿')}>开始使用</Button>
         </View>
       )}
     </View>
