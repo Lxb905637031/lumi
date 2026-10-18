@@ -1,0 +1,23 @@
+.inline-feedback {
+  margin-top: 22px;
+  padding: 18px 20px;
+  border-radius: 8px;
+  font-size: 24px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.inline-feedback--info {
+  background: #f0ece5;
+  color: var(--lumi-color-muted);
+}
+
+.inline-feedback--success {
+  background: #e8f1e7;
+  color: #356b42;
+}
+
+.inline-feedback--error {
+  background: #f7e8e3;
+  color: #a33f2e;
+}

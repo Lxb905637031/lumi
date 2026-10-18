@@ -13,9 +13,7 @@ export class AuthService {
 
   async login(code: string) {
     const freeMode = this.config.getOrThrow<string>('FREE_MODE') === 'true';
-    const openId = freeMode
-      ? this.getLocalOpenId(code)
-      : await this.exchangeWechatCode(code);
+    const openId = freeMode ? this.getLocalOpenId(code) : await this.exchangeWechatCode(code);
     const user = await this.prisma.user.upsert({
       where: { wxOpenId: openId },
       create: { wxOpenId: openId },
@@ -53,7 +51,10 @@ export class AuthService {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (!response.ok) throw new Error(`WeChat returned ${response.status}`);
-      const result = (await response.json()) as { openid?: string; errcode?: number };
+      const result = (await response.json()) as {
+        openid?: string;
+        errcode?: number;
+      };
       if (!result.openid) throw new UnauthorizedException(`微信登录失败（${result.errcode ?? 'unknown'}）`);
       return result.openid;
     } catch (error) {

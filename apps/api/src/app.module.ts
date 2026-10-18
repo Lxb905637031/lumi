@@ -24,7 +24,11 @@ import { WardrobeModule } from './wardrobe/wardrobe.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        signOptions: { expiresIn: '1h', issuer: 'lumi-api', audience: 'lumi-miniapp' },
+        signOptions: {
+          expiresIn: '1h',
+          issuer: 'lumi-api',
+          audience: 'lumi-miniapp',
+        },
         verifyOptions: { issuer: 'lumi-api', audience: 'lumi-miniapp' },
       }),
     }),

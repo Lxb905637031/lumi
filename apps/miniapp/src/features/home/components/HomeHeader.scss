@@ -1,0 +1,44 @@
+.home-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 0 48px;
+}
+
+.home-eyebrow {
+  display: block;
+  color: var(--lumi-color-muted);
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+
+.home-title {
+  display: block;
+  max-width: 520px;
+  margin-top: 18px;
+  font-size: 50px;
+  color: var(--lumi-color-ink);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.home-subtitle {
+  display: block;
+  margin-top: 18px;
+  color: var(--lumi-color-muted);
+  font-size: 26px;
+  line-height: 1.5;
+}
+
+.home-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--lumi-color-brand);
+  color: #fff7ef;
+  font-family: Georgia, serif;
+  font-size: 50px;
+}

@@ -1,0 +1,41 @@
+.inspiration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  padding-top: 28px;
+}
+
+.feed-inspiration {
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--lumi-color-surface);
+}
+
+.feed-image-placeholder {
+  display: flex;
+  align-items: flex-end;
+  height: 320px;
+  padding: 18px;
+  background: linear-gradient(145deg, #e9d7cb, #d0b7a6);
+  color: #fffdf9;
+  font-size: 28px;
+}
+
+.feed-card-title,
+.feed-card-meta {
+  display: block;
+  padding: 0 18px;
+}
+
+.feed-card-title {
+  padding-top: 18px;
+  font-size: 27px;
+  line-height: 1.4;
+}
+
+.feed-card-meta {
+  padding-top: 10px;
+  padding-bottom: 18px;
+  color: var(--lumi-color-muted);
+  font-size: 22px;
+}

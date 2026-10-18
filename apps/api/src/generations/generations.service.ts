@@ -1,26 +1,49 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Prisma } from '@prisma/client';
 import { GenerationJobStatus } from '@prisma/client';
+import type { CursorPage } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
+import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
+import type { CursorPaginationDto } from '../common/pagination/pagination.dto';
+import { GENERATION_QUEUE, type GenerationQueue } from './generation-queue.port';
+
+type GenerationJobListItem = Prisma.GenerationJobGetPayload<{
+  include: { outputs: true };
+}>;
 
 @Injectable()
 export class GenerationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    @Inject(GENERATION_QUEUE) private readonly generationQueue: GenerationQueue,
   ) {}
 
-  async create(userId: string, input: { profileVersionId: string; clothingAssetId: string; idempotencyKey: string }) {
+  async create(
+    userId: string,
+    input: {
+      profileVersionId: string;
+      clothingAssetId: string;
+      idempotencyKey: string;
+    },
+  ) {
     const existing = await this.prisma.generationJob.findFirst({
       where: { userId, idempotencyKey: input.idempotencyKey },
     });
     if (existing) return existing;
 
+    if (this.config.getOrThrow<string>('FREE_MODE') !== 'true') {
+      throw new ServiceUnavailableException('真实试穿生成服务尚未配置');
+    }
+
     const profileVersion = await this.prisma.bodyProfileVersion.findFirst({
       where: { id: input.profileVersionId, profile: { userId } },
     });
     if (!profileVersion) throw new NotFoundException('身材档案版本不存在');
-    const clothingItem = await this.prisma.clothingItem.findFirst({ where: { id: input.clothingAssetId, userId } });
+    const clothingItem = await this.prisma.clothingItem.findFirst({
+      where: { id: input.clothingAssetId, userId },
+    });
     if (!clothingItem) throw new NotFoundException('衣物资料不存在');
 
     try {
@@ -34,7 +57,7 @@ export class GenerationsService {
           provider: 'mock',
         },
       });
-      if (this.config.getOrThrow<string>('FREE_MODE') === 'true') void this.simulate(job.id, userId);
+      await this.generationQueue.enqueue({ jobId: job.id, userId });
       return job;
     } catch (error) {
       if ((error as { code?: string }).code === 'P2002') {
@@ -47,30 +70,6 @@ export class GenerationsService {
     }
   }
 
-  private async simulate(jobId: string, userId: string) {
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    await this.prisma.generationJob.updateMany({
-      where: { id: jobId, userId, status: GenerationJobStatus.QUEUED },
-      data: { status: GenerationJobStatus.RUNNING },
-    });
-    await new Promise((resolve) => setTimeout(resolve, 650));
-    const job = await this.prisma.generationJob.findFirst({ where: { id: jobId, userId } });
-    if (!job || job.status !== GenerationJobStatus.RUNNING) return;
-    const asset = await this.prisma.mediaAsset.create({
-      data: {
-        ownerId: userId,
-        objectKey: `mock/generations/${jobId}.jpg`,
-        mimeType: 'image/jpeg',
-        byteSize: 0,
-        sha256: `mock-${jobId}`,
-      },
-    });
-    await this.prisma.$transaction([
-      this.prisma.generationOutput.create({ data: { jobId, assetId: asset.id } }),
-      this.prisma.generationJob.update({ where: { id: jobId }, data: { status: GenerationJobStatus.SUCCEEDED } }),
-    ]);
-  }
-
   async findOwned(userId: string, id: string) {
     const job = await this.prisma.generationJob.findFirst({
       where: { id, userId },
@@ -80,12 +79,39 @@ export class GenerationsService {
     return job;
   }
 
-  list(userId: string) {
-    return this.prisma.generationJob.findMany({
-      where: { userId },
+  async list(userId: string, pagination: CursorPaginationDto): Promise<CursorPage<GenerationJobListItem>> {
+    const cursor = decodeTimestampCursor(pagination.cursor);
+    const jobs = await this.prisma.generationJob.findMany({
+      where: {
+        userId,
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(cursor.timestamp) } },
+                {
+                  createdAt: new Date(cursor.timestamp),
+                  id: { lt: cursor.id },
+                },
+              ],
+            }
+          : {}),
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: 50,
+      take: pagination.limit + 1,
       include: { outputs: true },
     });
+    const hasNextPage = jobs.length > pagination.limit;
+    const items = hasNextPage ? jobs.slice(0, pagination.limit) : jobs;
+    const last = items.at(-1);
+    return {
+      items,
+      nextCursor:
+        hasNextPage && last
+          ? encodeTimestampCursor({
+              timestamp: last.createdAt.toISOString(),
+              id: last.id,
+            })
+          : null,
+    };
   }
 }

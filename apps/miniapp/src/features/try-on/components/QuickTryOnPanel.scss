@@ -1,0 +1,26 @@
+.try-on-empty-state {
+  padding: 120px 24px;
+  text-align: center;
+}
+
+.try-on-empty-title,
+.try-on-empty-copy {
+  display: block;
+}
+
+.try-on-empty-title {
+  color: var(--lumi-color-ink);
+  font-size: 38px;
+  font-weight: 600;
+}
+
+.try-on-empty-copy {
+  margin-top: 20px;
+  color: var(--lumi-color-muted);
+  font-size: 27px;
+  line-height: 1.6;
+}
+
+.try-on-empty-state .lumi-button {
+  margin-top: 42px;
+}

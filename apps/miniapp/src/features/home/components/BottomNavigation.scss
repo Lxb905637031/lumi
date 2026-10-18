@@ -1,0 +1,17 @@
+.home-tabs {
+  display: flex;
+  gap: 36px;
+  border-bottom: 1px solid var(--lumi-color-line);
+}
+
+.home-tab {
+  padding: 0 4px 20px;
+  color: var(--lumi-color-muted);
+  font-size: 28px;
+}
+
+.home-tab-active {
+  border-bottom: 4px solid var(--lumi-color-brand);
+  color: var(--lumi-color-ink);
+  font-weight: 600;
+}

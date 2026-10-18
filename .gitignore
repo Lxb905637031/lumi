@@ -12,3 +12,5 @@ apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
 apps/miniapp/dist
 apps/admin/dist
+.playwright-cli
+output/playwright

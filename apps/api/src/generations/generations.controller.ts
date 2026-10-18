@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../common/auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthenticatedUser } from '../common/authenticated-request';
+import { CursorPaginationDto } from '../common/pagination/pagination.dto';
 import { CreateGenerationJobDto } from './generation.dto';
 import { GenerationsService } from './generations.service';
 
@@ -11,8 +12,8 @@ export class GenerationsController {
   constructor(private readonly generations: GenerationsService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthenticatedUser) {
-    return this.generations.list(user.id);
+  list(@CurrentUser() user: AuthenticatedUser, @Query() query: CursorPaginationDto) {
+    return this.generations.list(user.id, query);
   }
 
   @Post()

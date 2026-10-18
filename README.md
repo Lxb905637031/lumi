@@ -13,6 +13,8 @@ packages/
   contracts/ Shared API contracts and domain enums
 ```
 
+See [docs/architecture/ENGINEERING-ARCHITECTURE.md](docs/architecture/ENGINEERING-ARCHITECTURE.md) for module boundaries, feature directory structure, dependency rules, and code conventions.
+
 ## Start locally
 
 ```bash
@@ -36,3 +38,5 @@ The zero-budget development mode is enabled by `FREE_MODE=true`. It disables pay
 - User media stays private until moderation and explicit publishing.
 - Generation tasks are asynchronous and idempotent.
 - Database migrations and API tests are required before a production release.
+- Run `pnpm check` before opening a pull request. It runs formatting, lint, typecheck, unit tests, and app builds.
+- Release readiness and required manual acceptance are tracked in `docs/architecture/DEFINITION-OF-DONE.md`.

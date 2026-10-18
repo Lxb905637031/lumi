@@ -1,6 +1,8 @@
+@use './styles/tokens.scss';
+
 page {
-  background: #f7f4ef;
-  color: #242321;
+  background: var(--lumi-color-canvas);
+  color: var(--lumi-color-ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
 }
 

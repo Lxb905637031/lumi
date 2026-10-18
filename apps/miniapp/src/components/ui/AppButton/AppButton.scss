@@ -1,0 +1,32 @@
+.lumi-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 88px;
+  border: 0;
+  border-radius: var(--lumi-radius-control);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.lumi-button::after {
+  border: 0;
+}
+
+.lumi-button--primary {
+  background: var(--lumi-color-brand);
+  color: #fff;
+}
+
+.lumi-button--primary[disabled] {
+  background: #d8a394;
+  color: #fff;
+}
+
+.lumi-button--secondary {
+  border: 1px solid var(--lumi-color-line);
+  background: var(--lumi-color-surface);
+  color: var(--lumi-color-ink);
+}

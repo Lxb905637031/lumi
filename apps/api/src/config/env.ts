@@ -40,13 +40,21 @@ class Environment {
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {
-  const environment = plainToInstance(Environment, config, { enableImplicitConversion: true });
+  const environment = plainToInstance(Environment, config, {
+    enableImplicitConversion: true,
+  });
   const errors = validateSync(environment, { skipMissingProperties: false });
   if (errors.length > 0) {
     throw new Error(`Invalid environment configuration: ${errors.toString()}`);
   }
   if (environment.FREE_MODE !== 'true' && (!environment.WECHAT_APP_ID || !environment.WECHAT_APP_SECRET)) {
     throw new Error('WECHAT_APP_ID and WECHAT_APP_SECRET are required when FREE_MODE is disabled');
+  }
+  if (environment.NODE_ENV === 'production' && environment.FREE_MODE === 'true') {
+    throw new Error('FREE_MODE must be disabled in production');
+  }
+  if (environment.NODE_ENV === 'production' && !environment.CORS_ORIGINS.trim()) {
+    throw new Error('CORS_ORIGINS must be configured in production');
   }
   return environment;
 }

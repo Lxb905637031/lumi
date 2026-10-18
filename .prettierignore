@@ -1,0 +1,11 @@
+node_modules
+**/dist
+**/.taro
+**/.swc
+.playwright-cli
+output
+pnpm-lock.yaml
+.codex
+docs/design
+Lumi-*.md
+docker-compose.yml

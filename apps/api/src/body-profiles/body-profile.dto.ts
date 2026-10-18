@@ -1,7 +1,8 @@
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
 
 export class CreateBodyProfileDto {
   @IsString()
+  @Length(1, 80)
   name!: string;
 
   @IsOptional()

@@ -1,0 +1,26 @@
+.profile-empty-state {
+  padding: 120px 24px;
+  text-align: center;
+}
+
+.profile-empty-title,
+.profile-empty-copy {
+  display: block;
+}
+
+.profile-empty-title {
+  color: var(--lumi-color-ink);
+  font-size: 38px;
+  font-weight: 600;
+}
+
+.profile-empty-copy {
+  margin-top: 20px;
+  color: var(--lumi-color-muted);
+  font-size: 27px;
+  line-height: 1.6;
+}
+
+.profile-empty-state .lumi-button {
+  margin-top: 42px;
+}
