@@ -13,6 +13,7 @@ allowBuilds:
   '@tarojs/cli': true
   esbuild: true
   prisma: true
+  msgpackr-extract: false
 
 catalog:
   '@babel/preset-react': ^7.24.1

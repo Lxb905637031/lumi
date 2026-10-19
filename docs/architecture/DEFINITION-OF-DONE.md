@@ -21,4 +21,4 @@
 
 ## 当前 Lumi 状态
 
-当前仓库只满足开发阶段基础：monorepo、严格 TypeScript、共享 API 类型、feature 拆分、Taro 与后台组件基础、API smoke test、静态构建、本地 FREE_MODE 联调，以及审核 API/RBAC/审计的开发垂直切片。后台正式登录、mock 生成队列、缺失的真实媒体上传/AI provider、持久化队列、真机验收仍是发布阻塞项；不能将当前状态标记为生产就绪。
+当前仓库只满足开发阶段基础与一条完整的生成任务编排切片：monorepo、严格 TypeScript、共享 API 类型、feature 拆分、Taro 与后台组件基础、API smoke test、静态构建、审核 API/RBAC/审计，以及 Redis/BullMQ 持久化生成队列（幂等、取消、重试、死信和本地 SVG provider）。后台正式登录、真实媒体上传/私有对象存储、真实 AI provider、真机验收仍是发布阻塞项；本地 provider 只是免费开发和 CI 适配器，不能将当前状态标记为生产就绪。

@@ -165,7 +165,11 @@ assert.equal(jobsPage.response.status, 200);
 assert.equal(jobsPage.body.items.length, 1);
 
 let job = createdJob.body;
-for (let attempt = 0; attempt < 12 && !['SUCCEEDED', 'FAILED', 'CANCELLED'].includes(job.status); attempt += 1) {
+for (
+  let attempt = 0;
+  attempt < 12 && !['SUCCEEDED', 'FAILED', 'DEAD_LETTER', 'CANCELLED'].includes(job.status);
+  attempt += 1
+) {
   await new Promise((resolve) => setTimeout(resolve, 250));
   const result = await request(`/generation-jobs/${job.id}`, {
     headers: authorization,
@@ -175,6 +179,60 @@ for (let attempt = 0; attempt < 12 && !['SUCCEEDED', 'FAILED', 'CANCELLED'].incl
 }
 assert.equal(job.status, 'SUCCEEDED');
 assert.equal(job.outputs.length, 1);
+assert.equal(job.outputs[0].mimeType, 'image/svg+xml');
+assert.match(job.outputs[0].previewData, /^data:image\/svg\+xml;base64,/);
+
+const recoveryPrisma = new PrismaClient();
+const deadLetterFixture = await recoveryPrisma.generationJob.create({
+  data: {
+    userId: login.body.user.id,
+    profileVersionId,
+    clothingAssetId: clothing.body.id,
+    idempotencyKey: `smoke-retry-${Date.now()}`,
+    provider: 'local-svg',
+    status: 'DEAD_LETTER',
+    errorCode: 'PROVIDER_UNAVAILABLE',
+  },
+});
+const cancelledFixture = await recoveryPrisma.generationJob.create({
+  data: {
+    userId: login.body.user.id,
+    profileVersionId,
+    clothingAssetId: clothing.body.id,
+    idempotencyKey: `smoke-cancel-${Date.now()}`,
+    provider: 'local-svg',
+    status: 'QUEUED',
+  },
+});
+await recoveryPrisma.$disconnect();
+
+const retriedJob = await request(`/generation-jobs/${deadLetterFixture.id}/retry`, {
+  method: 'POST',
+  headers: authorization,
+  body: JSON.stringify({}),
+});
+assert.equal(retriedJob.response.status, 201);
+assert.ok(['QUEUED', 'RUNNING', 'SUCCEEDED'].includes(retriedJob.body.status));
+const cancelledJob = await request(`/generation-jobs/${cancelledFixture.id}/cancel`, {
+  method: 'POST',
+  headers: authorization,
+  body: JSON.stringify({}),
+});
+assert.equal(cancelledJob.response.status, 201);
+assert.equal(cancelledJob.body.status, 'CANCELLED');
+
+let recovered = retriedJob.body;
+for (
+  let attempt = 0;
+  attempt < 12 && !['SUCCEEDED', 'FAILED', 'DEAD_LETTER', 'CANCELLED'].includes(recovered.status);
+  attempt += 1
+) {
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const result = await request(`/generation-jobs/${deadLetterFixture.id}`, { headers: authorization });
+  assert.equal(result.response.status, 200);
+  recovered = result.body;
+}
+assert.equal(recovered.status, 'SUCCEEDED');
 
 console.log(
   JSON.stringify({

@@ -8,3 +8,11 @@ export function createGeneration(input: CreateGenerationInput): Promise<Generati
 export function getGeneration(id: string): Promise<GenerationJob> {
   return request(`/generation-jobs/${id}`);
 }
+
+export function retryGeneration(id: string): Promise<GenerationJob> {
+  return request(`/generation-jobs/${id}/retry`, { method: 'POST', data: {} });
+}
+
+export function cancelGeneration(id: string): Promise<GenerationJob> {
+  return request(`/generation-jobs/${id}/cancel`, { method: 'POST', data: {} });
+}

@@ -39,6 +39,7 @@ For local admin API checks, set `LOCAL_ADMIN_OPEN_IDS=admin-smoke` and use the f
 - List endpoints are bounded and cursor-paginated.
 - User media stays private until moderation and explicit publishing.
 - Generation tasks are asynchronous and idempotent.
+- Generation tasks use the self-hosted Redis/BullMQ queue with retry, cancellation, dead-letter state, manual retry, and an explicit local SVG provider for free development. The local provider is not a production AI model.
 - Moderation routes use separate authentication and RBAC guards; status changes are conditionally updated and written to an audit table.
 - Database migrations and API tests are required before a production release.
 - Run `pnpm check` before opening a pull request. It runs formatting, lint, typecheck, unit tests, and app builds.

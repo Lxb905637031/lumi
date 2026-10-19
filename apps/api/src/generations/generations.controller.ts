@@ -21,6 +21,16 @@ export class GenerationsController {
     return this.generations.create(user.id, dto);
   }
 
+  @Post(':id/retry')
+  retry(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.generations.retry(user.id, id);
+  }
+
+  @Post(':id/cancel')
+  cancel(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.generations.cancel(user.id, id);
+  }
+
   @Get(':id')
   findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.generations.findOwned(user.id, id);

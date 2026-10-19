@@ -24,6 +24,7 @@ enum GenerationJobStatus {
   RUNNING
   SUCCEEDED
   FAILED
+  DEAD_LETTER
   CANCELLED
 }
 
@@ -35,19 +36,19 @@ enum ModerationStatus {
 }
 
 model User {
-  id          String     @id @default(cuid())
-  wxOpenId    String     @unique @map("wx_open_id")
-  status      UserStatus @default(ACTIVE)
-  role        UserRole   @default(USER)
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  profiles    BodyProfile[]
-  assets      MediaAsset[]
-  jobs        GenerationJob[]
-  posts       Post[]
-  comments    Comment[]
-  sessions    UserSession[]
-  clothingItems ClothingItem[]
+  id                String             @id @default(cuid())
+  wxOpenId          String             @unique @map("wx_open_id")
+  status            UserStatus         @default(ACTIVE)
+  role              UserRole           @default(USER)
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  profiles          BodyProfile[]
+  assets            MediaAsset[]
+  jobs              GenerationJob[]
+  posts             Post[]
+  comments          Comment[]
+  sessions          UserSession[]
+  clothingItems     ClothingItem[]
   moderationActions ModerationAction[] @relation("ModerationActor")
 
   @@map("users")
@@ -66,13 +67,13 @@ model UserSession {
 }
 
 model BodyProfile {
-  id            String   @id @default(cuid())
-  userId        String   @map("user_id")
+  id            String               @id @default(cuid())
+  userId        String               @map("user_id")
   name          String
-  activeVersion Int      @default(1) @map("active_version")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeVersion Int                  @default(1) @map("active_version")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   versions      BodyProfileVersion[]
 
   @@index([userId, updatedAt])
@@ -80,65 +81,70 @@ model BodyProfile {
 }
 
 model BodyProfileVersion {
-  id          String   @id @default(cuid())
-  profileId   String   @map("profile_id")
-  version     Int
-  measurements Json
-  sourceAssetId String? @map("source_asset_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  profile     BodyProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  jobs        GenerationJob[]
+  id            String          @id @default(cuid())
+  profileId     String          @map("profile_id")
+  version       Int
+  measurements  Json
+  sourceAssetId String?         @map("source_asset_id")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  profile       BodyProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  jobs          GenerationJob[]
 
   @@unique([profileId, version])
   @@map("body_profile_versions")
 }
 
 model MediaAsset {
-  id          String   @id @default(cuid())
-  ownerId     String   @map("owner_id")
-  objectKey   String   @unique @map("object_key")
-  mimeType    String   @map("mime_type")
-  byteSize    Int      @map("byte_size")
-  sha256      String
-  visibility  String   @default("PRIVATE")
-  deletedAt   DateTime? @map("deleted_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id                String             @id @default(cuid())
+  ownerId           String             @map("owner_id")
+  objectKey         String             @unique @map("object_key")
+  mimeType          String             @map("mime_type")
+  byteSize          Int                @map("byte_size")
+  sha256            String
+  visibility        String             @default("PRIVATE")
+  previewData       String?            @map("preview_data") @db.Text
+  deletedAt         DateTime?          @map("deleted_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  owner             User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  generationOutputs GenerationOutput[]
 
   @@index([ownerId, createdAt])
   @@map("media_assets")
 }
 
 model ClothingItem {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  name       String
-  category   String
-  assetId    String?  @map("asset_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobs       GenerationJob[]
+  id        String          @id @default(cuid())
+  userId    String          @map("user_id")
+  name      String
+  category  String
+  assetId   String?         @map("asset_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs      GenerationJob[]
 
   @@index([userId, updatedAt])
   @@map("clothing_items")
 }
 
 model GenerationJob {
-  id               String             @id @default(cuid())
-  userId           String             @map("user_id")
-  profileVersionId String             @map("profile_version_id")
-  clothingAssetId  String             @map("clothing_asset_id")
-  idempotencyKey   String             @map("idempotency_key")
+  id               String              @id @default(cuid())
+  userId           String              @map("user_id")
+  profileVersionId String              @map("profile_version_id")
+  clothingAssetId  String              @map("clothing_asset_id")
+  idempotencyKey   String              @map("idempotency_key")
   status           GenerationJobStatus @default(QUEUED)
-  provider         String             @default("mock")
-  retryCount       Int                @default(0) @map("retry_count")
-  errorCode        String?            @map("error_code")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profileVersion   BodyProfileVersion @relation(fields: [profileVersionId], references: [id])
-  clothingAsset    ClothingItem      @relation(fields: [clothingAssetId], references: [id])
+  provider         String              @default("local")
+  retryCount       Int                 @default(0) @map("retry_count")
+  errorCode        String?             @map("error_code")
+  nextAttemptAt    DateTime?           @default(now()) @map("next_attempt_at")
+  startedAt        DateTime?           @map("started_at")
+  completedAt      DateTime?           @map("completed_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileVersion   BodyProfileVersion  @relation(fields: [profileVersionId], references: [id])
+  clothingAsset    ClothingItem        @relation(fields: [clothingAssetId], references: [id])
   outputs          GenerationOutput[]
 
   @@unique([userId, idempotencyKey])
@@ -147,27 +153,29 @@ model GenerationJob {
 }
 
 model GenerationOutput {
-  id          String   @id @default(cuid())
-  jobId       String   @map("job_id")
-  assetId     String   @map("asset_id")
-  selectedAt  DateTime? @map("selected_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  job         GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id         String        @id @default(cuid())
+  jobId      String        @map("job_id")
+  assetId    String        @map("asset_id")
+  selectedAt DateTime?     @map("selected_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  job        GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  asset      MediaAsset    @relation(fields: [assetId], references: [id], onDelete: Restrict)
 
+  @@unique([jobId, assetId])
   @@index([jobId, createdAt])
   @@map("generation_outputs")
 }
 
 model Post {
-  id               String           @id @default(cuid())
-  authorId         String           @map("author_id")
-  title            String
-  body             String
-  moderationStatus ModerationStatus @default(PENDING) @map("moderation_status")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  author           User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  comments         Comment[]
+  id                String             @id @default(cuid())
+  authorId          String             @map("author_id")
+  title             String
+  body              String
+  moderationStatus  ModerationStatus   @default(PENDING) @map("moderation_status")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  author            User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments          Comment[]
   moderationActions ModerationAction[]
 
   @@index([moderationStatus, createdAt])

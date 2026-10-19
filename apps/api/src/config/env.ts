@@ -1,5 +1,5 @@
 import { plainToInstance, Type } from 'class-transformer';
-import { IsBooleanString, IsInt, IsOptional, IsString, MinLength, validateSync } from 'class-validator';
+import { IsBooleanString, IsInt, IsOptional, IsString, Min, Max, MinLength, validateSync } from 'class-validator';
 
 class Environment {
   @IsOptional()
@@ -41,6 +41,20 @@ class Environment {
   @IsOptional()
   @IsString()
   LOCAL_ADMIN_OPEN_IDS = '';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  GENERATION_QUEUE_ATTEMPTS = 3;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(60_000)
+  GENERATION_QUEUE_BACKOFF_MS = 1_000;
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {

@@ -1,6 +1,6 @@
 export const API_PREFIX = '/api/v1' as const;
 
-export const generationJobStatuses = ['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'] as const;
+export const generationJobStatuses = ['QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'DEAD_LETTER', 'CANCELLED'] as const;
 
 export type GenerationJobStatus = (typeof generationJobStatuses)[number];
 
@@ -93,6 +93,25 @@ export type GenerationJob = {
   id: string;
   status: GenerationJobStatus;
   provider: string;
+  retryCount: number;
+  errorCode: string | null;
+  nextAttemptAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  outputs: GenerationOutput[];
+};
+
+export type GenerationOutput = {
+  id: string;
+  assetId: string;
+  mimeType: string;
+  byteSize: number;
+  visibility: string;
+  previewData: string | null;
+  selectedAt: string | null;
+  createdAt: string;
 };
 
 export type CreateGenerationInput = {
