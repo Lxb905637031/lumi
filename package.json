@@ -21,6 +21,9 @@
     "db:generate": "pnpm --filter @lumi/api db:generate",
     "db:push": "pnpm --filter @lumi/api db:push",
     "db:migrate": "pnpm --filter @lumi/api db:migrate",
+    "db:deploy": "pnpm --filter @lumi/api db:deploy",
+    "db:adopt-baseline": "pnpm --filter @lumi/api db:adopt-baseline",
+    "test:migrations": "pnpm --filter @lumi/api test:migrations",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down"
   },

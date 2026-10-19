@@ -51,9 +51,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm check
+      - name: Empty database and legacy upgrade regression
+        run: pnpm test:migrations
       - name: Database schema and API integration
         run: |
-          pnpm db:push
+          pnpm db:deploy
           pnpm --filter @lumi/api start > /tmp/lumi-api.log 2>&1 &
           api_pid=$!
           trap 'kill "$api_pid" 2>/dev/null || true' EXIT
