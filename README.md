@@ -39,6 +39,8 @@ Private media uses an S3 adapter with signed POST uploads, server-side image dec
 
 The current implementation/verification status is recorded in [the 80-item delivery checklist](docs/architecture/DELIVERY-MATRIX.md). API checks do not substitute for WeChat developer-tool, iOS or Android acceptance. Run `pnpm --filter @lumi/api test:integration` against the local running API, PostgreSQL and Redis; the script uses unique fixtures and cleans up only its own data. It refuses non-loopback API URLs and requires the API to report free development mode.
 
+Generation quota uses transactional reservations: a successful job consumes one credit; cancellation, terminal failure or an expired execution releases its hold. `FREE_TRIAL_CREDITS=5` is the development-only initial grant, issued once per account; changing it does not re-grant existing accounts. See [quota invariants](docs/architecture/FREE-QUOTA.md). Run `pnpm --filter @lumi/api test:quota` for isolated PostgreSQL concurrency/recovery tests, and `pnpm --filter @lumi/api test:try-on-client` against the running local S3-backed API for the actual miniapp workflow over HTTP. The latter verifies lost-response recovery, not Taro transport/rendering or real AI. Miniapp workflow unit tests run as part of `pnpm check`.
+
 ## Engineering rules
 
 - Business logic belongs in feature modules, not in `AppModule`.

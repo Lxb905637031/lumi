@@ -31,8 +31,9 @@ apps/api/src/
   body-profiles/          # Controller / DTO / Service / Module
   wardrobe/               # Controller / DTO / Service / Module
   generations/            # 用例编排、BullMQ 队列、provider 端口和本地适配器
+  quota/                  # 账户/预留/追加账本，事务结算与释放；客户端不能写余额
   moderation/             # 管理审核队列、状态变更和审计记录
-  media/                  # 显式开发媒体适配与拥有权校验
+  media/                  # 私有 S3 签名上传、完整解码、拥有权和持久对象清理；local 仅开发
   community/              # 发布、Feed、评论、点赞、收藏和举报
   notifications/          # 审核/生成消息与已读状态
   operations/             # 后台运营指标，Controller -> Service -> Prisma
@@ -43,6 +44,7 @@ apps/miniapp/src/
   components/              # 跨 feature 的纯展示组件
     ui/                    # Button、Feedback 等无业务含义的基础控件
   features/<feature>/      # 一个可交付用户任务的 UI、hook、API
+    try-on/try-on-workflow.ts # 平台无关工作流：显式输入、确认、幂等续提与响应隔离
   services/                # Taro HTTP client、token 等平台边界
   styles/                  # 语义 token 和全局基础样式
 
