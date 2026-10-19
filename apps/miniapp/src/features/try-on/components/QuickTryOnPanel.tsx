@@ -1,4 +1,5 @@
 import { Image, Text, View } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
 import { QuotaStatus } from '../../quota/components/QuotaStatus';
@@ -75,7 +76,17 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
         <View className="try-on-result">
           <Text className="try-on-result-title">本地开发预览</Text>
           <Image className="try-on-result-image" src={output.previewData} mode="aspectFit" />
-          <Text className="try-on-result-meta">输出默认私有。正式 AI 生成、下载、分享和发布结果仍待后续验收。</Text>
+          <Text className="try-on-result-meta">
+            输出默认私有。在生成记录中确认、云端保存、删除或提交社区审核；真实 AI、相册下载和好友分享尚未验收。
+          </Text>
+          <AppButton
+            variant="secondary"
+            onClick={() =>
+              void Taro.navigateTo({ url: `/pages/generations/index?id=${encodeURIComponent(state.job!.id)}` })
+            }
+          >
+            管理此结果
+          </AppButton>
         </View>
       )}
     </View>

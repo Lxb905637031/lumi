@@ -4,6 +4,10 @@ import { getSessionEpoch, request } from '../../services/http-client';
 
 const pendingUploads = new Map<string, { key: string; assetId?: string; uploaded: boolean; expiresAt: number }>();
 
+export function getMediaAsset(id: string): Promise<MediaAsset> {
+  return request(`/media/assets/${encodeURIComponent(id)}`);
+}
+
 export async function uploadImage(filePath: string): Promise<MediaAsset> {
   const bootstrap = await request<SystemBootstrap>('/system/bootstrap');
   if (bootstrap.media.uploadMode === 'signed-post') return uploadPrivateImage(filePath, bootstrap.media.maxBytes);

@@ -12,6 +12,8 @@ import { GENERATION_PROVIDER } from './generation-provider.port';
 import { GenerationProcessor } from './generation.processor';
 import { LocalGenerationProvider } from './local-generation-provider';
 import { GenerationsService } from './generations.service';
+import { GenerationResultsService } from './generation-results.service';
+import { GenerationResultsController } from './generation-results.controller';
 
 @Module({
   imports: [
@@ -34,9 +36,10 @@ import { GenerationsService } from './generations.service';
     }),
     BullModule.registerQueue({ name: GENERATION_QUEUE_NAME }),
   ],
-  controllers: [GenerationsController],
+  controllers: [GenerationsController, GenerationResultsController],
   providers: [
     GenerationsService,
+    GenerationResultsService,
     AuthGuard,
     BullMqGenerationQueueAdapter,
     GenerationProcessor,

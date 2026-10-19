@@ -27,6 +27,8 @@ type GenerationJobRecord = Prisma.GenerationJobGetPayload<{
             byteSize: true;
             visibility: true;
             previewData: true;
+            status: true;
+            deletedAt: true;
           };
         };
       };
@@ -284,16 +286,19 @@ export class GenerationsService {
       completedAt: job.completedAt?.toISOString() ?? null,
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt.toISOString(),
-      outputs: job.outputs.map((output) => ({
-        id: output.id,
-        assetId: output.asset.id,
-        mimeType: output.asset.mimeType,
-        byteSize: output.asset.byteSize,
-        visibility: output.asset.visibility,
-        previewData: output.asset.previewData,
-        selectedAt: output.selectedAt?.toISOString() ?? null,
-        createdAt: output.createdAt.toISOString(),
-      })),
+      outputs: job.outputs
+        .filter((output) => !output.deletedAt && !output.asset.deletedAt && output.asset.status === 'READY')
+        .map((output) => ({
+          id: output.id,
+          assetId: output.asset.id,
+          mimeType: output.asset.mimeType,
+          byteSize: output.asset.byteSize,
+          visibility: output.asset.visibility,
+          previewData: output.asset.previewData,
+          selectedAt: output.selectedAt?.toISOString() ?? null,
+          savedAt: output.savedAt?.toISOString() ?? null,
+          createdAt: output.createdAt.toISOString(),
+        })),
     };
   }
 
@@ -304,6 +309,8 @@ export class GenerationsService {
       byteSize: true,
       visibility: true,
       previewData: true,
+      status: true,
+      deletedAt: true,
     } as const;
   }
 }

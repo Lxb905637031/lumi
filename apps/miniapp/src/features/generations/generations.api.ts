@@ -20,3 +20,12 @@ export function retryGeneration(id: string): Promise<GenerationJob> {
 export function cancelGeneration(id: string): Promise<GenerationJob> {
   return request(`/generation-jobs/${id}/cancel`, { method: 'POST', data: {} });
 }
+
+export type ResultAction = 'select' | 'save' | 'unsave' | 'delete';
+
+export function updateGenerationResult(id: string, outputId: string, action: ResultAction): Promise<GenerationJob> {
+  const suffix = action === 'select' ? '/selection' : action === 'delete' ? '' : '/saved';
+  return request(`/generation-jobs/${encodeURIComponent(id)}/outputs/${encodeURIComponent(outputId)}${suffix}`, {
+    method: action === 'delete' || action === 'unsave' ? 'DELETE' : 'PUT',
+  });
+}

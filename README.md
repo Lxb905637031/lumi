@@ -41,6 +41,8 @@ The current implementation/verification status is recorded in [the 80-item deliv
 
 Generation quota uses transactional reservations: a successful job consumes one credit; cancellation, terminal failure or an expired execution releases its hold. `FREE_TRIAL_CREDITS=5` is the development-only initial grant, issued once per account; changing it does not re-grant existing accounts. See [quota invariants](docs/architecture/FREE-QUOTA.md). Run `pnpm --filter @lumi/api test:quota` for isolated PostgreSQL concurrency/recovery tests, and `pnpm --filter @lumi/api test:try-on-client` against the running local S3-backed API for the actual miniapp workflow over HTTP. The latter verifies lost-response recovery, not Taro transport/rendering or real AI. Miniapp workflow unit tests run as part of `pnpm check`.
 
+Generation results support owned confirmation, cloud save/unsave and deletion without refunding successful usage. Post references protect images from deletion; confirmed generated images are always labelled when published. See [result lifecycle](docs/architecture/GENERATION-RESULTS.md). `pnpm --filter @lumi/api test:results` verifies real local HTTP/database/S3 behavior, not a genuine AI model, phone-album download, WeChat sharing or device acceptance.
+
 ## Engineering rules
 
 - Business logic belongs in feature modules, not in `AppModule`.

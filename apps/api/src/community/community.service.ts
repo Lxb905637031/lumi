@@ -119,25 +119,32 @@ export class CommunityService {
     input: { title: string; body: string; imageAssetIds: string[]; topic?: string; isAiGenerated?: boolean },
   ) {
     const imageAssetIds = input.imageAssetIds ?? [];
-    if (imageAssetIds.length) {
-      const count = await this.prisma.mediaAsset.count({
+    const post = await this.prisma.$transaction(async (tx) => {
+      // Lock in stable order to serialize with deletion; no external storage work under this lock.
+      for (const id of [...imageAssetIds].sort())
+        await tx.$queryRaw`SELECT id FROM media_assets WHERE id = ${id} AND owner_id = ${userId} FOR UPDATE`;
+      const assets = await tx.mediaAsset.findMany({
         where: { id: { in: imageAssetIds }, ownerId: userId, status: 'READY', deletedAt: null },
+        select: { id: true, generationOutputs: { select: { deletedAt: true, selectedAt: true } } },
       });
-      if (count !== imageAssetIds.length) throw new NotFoundException('帖子图片不存在');
-    }
-    const post = await this.prisma.post.create({
-      data: {
-        authorId: userId,
-        title: input.title,
-        body: input.body,
-        imageAssetIds,
-        topic: input.topic,
-        isAiGenerated: input.isAiGenerated ?? false,
-      },
-      include: {
-        author: { select: { id: true, wxOpenId: true } },
-        _count: { select: { likes: true, comments: { where: { moderationStatus: 'APPROVED' } }, bookmarks: true } },
-      },
+      if (assets.length !== imageAssetIds.length) throw new NotFoundException('帖子图片不存在');
+      const generated = assets.flatMap((asset) => asset.generationOutputs);
+      if (generated.some((output) => output.deletedAt || !output.selectedAt))
+        throw new ConflictException('请先确认生成结果再发布');
+      return tx.post.create({
+        data: {
+          authorId: userId,
+          title: input.title,
+          body: input.body,
+          imageAssetIds,
+          topic: input.topic,
+          isAiGenerated: generated.length > 0 || (input.isAiGenerated ?? false),
+        },
+        include: {
+          author: { select: { id: true, wxOpenId: true } },
+          _count: { select: { likes: true, comments: { where: { moderationStatus: 'APPROVED' } }, bookmarks: true } },
+        },
+      });
     });
     return this.toPost(post);
   }

@@ -93,6 +93,13 @@ try {
     clothingId,
   );
   await legacy.client.$executeRawUnsafe(`ALTER TABLE "${legacy.schema}"."users" ADD COLUMN migration_test_drift TEXT`);
+  const outputId = randomUUID();
+  await legacy.client.$executeRawUnsafe(
+    `INSERT INTO "${legacy.schema}"."generation_outputs" (id, job_id, asset_id, selected_at) VALUES ($1, $2, $3, NOW())`,
+    outputId,
+    jobId,
+    assetId,
+  );
   await assert.rejects(() => adoptBaseline(legacy.databaseUrl), /Schema drift detected/);
   const [history] = await legacy.client.$queryRawUnsafe(
     'SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2) AS exists',
@@ -115,6 +122,10 @@ try {
   assert.equal(job.quotaAttempt, 0);
   assert.equal(job.inputSnapshot, null);
   assert.equal(job.executionToken, null);
+  const output = await legacy.client.generationOutput.findUniqueOrThrow({ where: { id: outputId } });
+  assert.ok(output.selectedAt, 'Migration retains the legacy selection');
+  assert.equal(output.savedAt, null);
+  assert.equal(output.deletedAt, null);
   assert.equal(await legacy.client.quotaAccount.count(), 0, 'Upgrades must not fabricate grants or historical charges');
   const migrations = await legacy.client.$queryRawUnsafe(
     `SELECT migration_name FROM "${legacy.schema}"."_prisma_migrations" WHERE finished_at IS NOT NULL`,

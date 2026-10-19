@@ -222,6 +222,7 @@ export type GenerationOutput = {
   visibility: string;
   previewData: string | null;
   selectedAt: string | null;
+  savedAt: string | null;
   createdAt: string;
 };
 

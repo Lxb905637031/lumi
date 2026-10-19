@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MAX_IMAGE_BYTES, sanitizeImage } from './image-sanitizer';
 import { OBJECT_STORAGE, type ObjectStorage } from './object-storage.port';
 import type { ReserveMediaUploadDto } from './media.dto';
+import { removeMediaAsset } from './remove-media-asset';
 
 const UPLOAD_TTL_SECONDS = 300;
 export const PROCESSING_LEASE_MS = 120_000;
@@ -205,24 +206,7 @@ export class MediaService {
   }
 
   async removeOwned(userId: string, id: string) {
-    await this.prisma.$transaction(async (tx) => {
-      // Serialize deletion with the final READY transition so a concurrently finalized object cannot lose its cleanup task.
-      await tx.$queryRaw`SELECT id FROM media_assets WHERE id = ${id} AND owner_id = ${userId} FOR UPDATE`;
-      const asset = await tx.mediaAsset.findFirst({ where: { id, ownerId: userId } });
-      if (!asset) throw new NotFoundException('图片不存在');
-      if (asset.deletedAt) return;
-      await tx.mediaAsset.update({
-        where: { id },
-        data: { status: 'DELETED', deletedAt: new Date(), visibility: 'DELETED', previewData: null },
-      });
-      if (asset.storageDriver === 's3' && asset.status === 'READY') {
-        await tx.objectCleanup.upsert({
-          where: { objectKey: asset.objectKey },
-          create: { objectKey: asset.objectKey, notBefore: new Date() },
-          update: { notBefore: new Date() },
-        });
-      }
-    });
+    await this.prisma.$transaction((tx) => removeMediaAsset(tx, userId, id));
     return { success: true };
   }
 

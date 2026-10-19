@@ -81,3 +81,4 @@ jobs:
           pnpm --filter @lumi/api test:integration
           LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:storage
           LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:try-on-client
+          LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:results
