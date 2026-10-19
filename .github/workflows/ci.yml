@@ -80,3 +80,4 @@ jobs:
           curl --fail --silent http://127.0.0.1:4300/api/v1/health >/dev/null || { cat /tmp/lumi-api.log; exit 1; }
           pnpm --filter @lumi/api test:integration
           LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:storage
+          LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:try-on-client

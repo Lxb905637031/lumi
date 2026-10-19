@@ -12,6 +12,7 @@
     "test:migrations": "node --env-file-if-exists=../../.env tests/migrations.mjs",
     "test:storage": "node --env-file-if-exists=../../.env tests/storage-integration.mjs",
     "test:quota": "node --env-file-if-exists=../../.env --import tsx --test tests/quota.integration.ts",
+    "test:try-on-client": "node --env-file-if-exists=../../.env --import tsx tests/try-on-client.integration.mjs",
     "storage:init-local": "node --env-file-if-exists=../../.env scripts/init-local-storage.mjs",
     "db:generate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js generate --schema prisma/schema.prisma",
     "db:push": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js db push --schema prisma/schema.prisma",

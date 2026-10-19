@@ -1,5 +1,6 @@
 import Taro from '@tarojs/taro';
 import type { ApiError } from '@lumi/contracts';
+import { ApiRequestError } from './api-request-error';
 
 const API_BASE_URL = process.env.TARO_APP_API_BASE_URL ?? 'http://127.0.0.1:4300/api/v1';
 const ACCESS_TOKEN_KEY = 'lumi.accessToken';
@@ -39,6 +40,7 @@ export function hasSession(): boolean {
 async function requestOnce<T>(path: string, options: Omit<Taro.request.Option, 'url'>, accessToken: string) {
   return Taro.request<T | ApiError>({
     url: `${API_BASE_URL}${path}`,
+    timeout: 15_000,
     ...options,
     header: {
       ...(options.data !== undefined ? { 'content-type': 'application/json' } : {}),
@@ -85,7 +87,11 @@ export async function request<T>(path: string, options: Omit<Taro.request.Option
 
   if (response.statusCode >= 400) {
     const body = response.data as ApiError;
-    throw new Error(body?.message ?? `请求失败（${response.statusCode}）`);
+    throw new ApiRequestError(
+      Array.isArray(body?.message) ? body.message.join('；') : (body?.message ?? `请求失败（${response.statusCode}）`),
+      response.statusCode,
+      body?.code,
+    );
   }
   return response.data as T;
 }
