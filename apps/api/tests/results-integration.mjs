@@ -81,6 +81,7 @@ try {
   await request('/media/assets/' + output.assetId, 409, owner.token, 'DELETE');
   await request('/community/posts', 409, owner.token, 'POST', {
     title: 'Unconfirmed',
+    idempotencyKey: randomUUID(),
     body: 'Fixture',
     imageAssetIds: [output.assetId],
   });
@@ -105,6 +106,7 @@ try {
   await request(second + '/selection', 200, owner.token, 'PUT');
   const post = await request('/community/posts', 201, owner.token, 'POST', {
     title: 'Selected fixture',
+    idempotencyKey: randomUUID(),
     body: 'Fixture',
     imageAssetIds: [s3Asset.id],
     isAiGenerated: false,
@@ -144,7 +146,12 @@ try {
     fetch(baseUrl + '/community/posts', {
       method: 'POST',
       headers: { authorization: 'Bearer ' + owner.token, 'content-type': 'application/json' },
-      body: JSON.stringify({ title: 'Race', body: 'Fixture', imageAssetIds: [output.assetId] }),
+      body: JSON.stringify({
+        title: 'Race',
+        body: 'Fixture',
+        imageAssetIds: [output.assetId],
+        idempotencyKey: randomUUID(),
+      }),
       signal: AbortSignal.timeout(15000),
     }),
     fetch(baseUrl + path, {

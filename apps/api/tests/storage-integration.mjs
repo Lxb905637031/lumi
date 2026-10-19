@@ -166,6 +166,7 @@ try {
     201,
     json('POST', owner.headers, {
       title: 'Storage fixture',
+      idempotencyKey: randomUUID(),
       body: 'Private until reviewed',
       imageAssetIds: [asset.id],
       topic: runId,

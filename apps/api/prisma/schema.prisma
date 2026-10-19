@@ -310,6 +310,7 @@ model GenerationOutput {
 
   @@unique([jobId, assetId])
   @@index([jobId, createdAt])
+  @@index([assetId, deletedAt])
   @@map("generation_outputs")
 }
 
@@ -318,6 +319,8 @@ model Post {
   authorId          String             @map("author_id")
   title             String
   body              String
+  idempotencyKey    String?            @map("idempotency_key")
+  requestHash       String?            @map("request_hash")
   imageAssetIds     Json               @default("[]") @map("image_asset_ids")
   topic             String?
   isAiGenerated     Boolean            @default(false) @map("is_ai_generated")
@@ -336,6 +339,8 @@ model Post {
   @@index([moderationStatus, createdAt])
   @@index([topic, moderationStatus, createdAt])
   @@index([authorId, createdAt])
+  @@unique([authorId, idempotencyKey])
+  @@index([imageAssetIds], type: Gin)
   @@map("posts")
 }
 

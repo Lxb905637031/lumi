@@ -313,13 +313,18 @@ try {
   passed.push('real HTTP quota ownership, pagination, successful consumption and concurrent budget exhaustion');
 
   const postInput = {
+    idempotencyKey: randomUUID(),
     title: 'Smoke community post',
     body: 'HTTP acceptance fixture',
     imageAssetIds: [image.id],
     topic: runId,
     isAiGenerated: true,
   };
-  await request('/community/posts', 400, write('POST', ownerAuth, { title: 'No images', body: 'Rejected' }));
+  await request(
+    '/community/posts',
+    400,
+    write('POST', ownerAuth, { title: 'No images', body: 'Rejected', idempotencyKey: randomUUID() }),
+  );
   const post = await request('/community/posts', 201, write('POST', ownerAuth, postInput));
   await request('/community/posts/' + post.id, 404);
   const ownPosts = await request('/community/me/posts?limit=5', 200, { headers: ownerAuth });

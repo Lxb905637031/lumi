@@ -8,16 +8,23 @@ import {
   ArrayUnique,
   ArrayMaxSize,
   ArrayMinSize,
+  Matches,
 } from 'class-validator';
 import { CursorPaginationDto } from '../common/pagination/pagination.dto';
 
 export class CreatePostDto {
   @IsString()
+  @Length(8, 128)
+  idempotencyKey!: string;
+
+  @IsString()
   @Length(1, 120)
+  @Matches(/\S/, { message: '标题不能为空白' })
   title!: string;
 
   @IsString()
   @Length(1, 5000)
+  @Matches(/\S/, { message: '正文不能为空白' })
   body!: string;
 
   @IsArray()

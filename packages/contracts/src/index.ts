@@ -171,9 +171,10 @@ export type CommunityPost = {
 };
 
 export type CreateCommunityPostInput = {
+  idempotencyKey: string;
   title: string;
   body: string;
-  imageAssetIds?: string[];
+  imageAssetIds: string[];
   topic?: string;
   isAiGenerated?: boolean;
 };

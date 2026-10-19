@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
-import type { CommunityComment, CommunityPost, CursorPage } from '@lumi/contracts';
+import type { CommunityComment, CommunityPost, CreateCommunityPostInput, CursorPage } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import type { CursorPaginationDto } from '../common/pagination/pagination.dto';
@@ -114,12 +115,30 @@ export class CommunityService {
     };
   }
 
-  async create(
-    userId: string,
-    input: { title: string; body: string; imageAssetIds: string[]; topic?: string; isAiGenerated?: boolean },
-  ) {
-    const imageAssetIds = input.imageAssetIds ?? [];
+  async create(userId: string, input: CreateCommunityPostInput) {
+    const imageAssetIds = input.imageAssetIds;
+    const content = {
+      title: input.title.trim(),
+      body: input.body.trim(),
+      topic: input.topic?.trim() || null,
+      imageAssetIds,
+      isAiGenerated: input.isAiGenerated ?? false,
+    };
+    const requestHash = createHash('sha256').update(JSON.stringify(content)).digest('hex');
     const post = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR NO KEY UPDATE`;
+      const existing = await tx.post.findUnique({
+        where: { authorId_idempotencyKey: { authorId: userId, idempotencyKey: input.idempotencyKey } },
+        include: {
+          author: { select: { id: true, wxOpenId: true } },
+          _count: { select: { likes: true, comments: { where: { moderationStatus: 'APPROVED' } }, bookmarks: true } },
+        },
+      });
+      if (existing) {
+        if (existing.requestHash !== requestHash) throw new ConflictException('发布请求标识已用于不同内容');
+        if (existing.deletedAt) throw new ConflictException('原发布内容已删除，请勿重复发布');
+        return existing;
+      }
       // Lock in stable order to serialize with deletion; no external storage work under this lock.
       for (const id of [...imageAssetIds].sort())
         await tx.$queryRaw`SELECT id FROM media_assets WHERE id = ${id} AND owner_id = ${userId} FOR UPDATE`;
@@ -134,10 +153,12 @@ export class CommunityService {
       return tx.post.create({
         data: {
           authorId: userId,
-          title: input.title,
-          body: input.body,
+          title: content.title,
+          body: content.body,
           imageAssetIds,
-          topic: input.topic,
+          topic: content.topic,
+          idempotencyKey: input.idempotencyKey,
+          requestHash,
           isAiGenerated: generated.length > 0 || (input.isAiGenerated ?? false),
         },
         include: {
