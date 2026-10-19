@@ -1,4 +1,4 @@
-import type { CreateGenerationInput, GenerationJob } from '@lumi/contracts';
+import type { CreateGenerationInput, CursorPage, GenerationJob } from '@lumi/contracts';
 import { request } from '../../services/http-client';
 
 export function createGeneration(input: CreateGenerationInput): Promise<GenerationJob> {
@@ -7,6 +7,10 @@ export function createGeneration(input: CreateGenerationInput): Promise<Generati
 
 export function getGeneration(id: string): Promise<GenerationJob> {
   return request(`/generation-jobs/${id}`);
+}
+
+export function listGenerations(cursor?: string): Promise<CursorPage<GenerationJob>> {
+  return request('/generation-jobs?limit=30' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
 }
 
 export function retryGeneration(id: string): Promise<GenerationJob> {

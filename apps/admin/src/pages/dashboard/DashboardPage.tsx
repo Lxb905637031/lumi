@@ -1,18 +1,32 @@
 import { AdminShell } from '../../components/admin-shell/AdminShell';
 import { MetricCard, type Metric } from '../../components/metric-card/MetricCard';
 import { ReviewQueue } from '../../features/moderation/ReviewQueue';
+import { getAdminOverview, type AdminOverview } from '../../services/moderation-api';
+import { logoutAdmin } from '../../services/admin-session';
+import { useEffect, useState } from 'react';
 
-const metrics: Metric[] = [
-  { label: '待审核', value: 3 },
-  { label: '今日生成', value: 0 },
-  { label: '失败任务', value: 0 },
-  { label: '社区帖子', value: 0 },
-];
-
-export function DashboardPage() {
+export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
+  const [overview, setOverview] = useState<AdminOverview>();
+  useEffect(() => {
+    void getAdminOverview()
+      .then(setOverview)
+      .catch(() => undefined);
+  }, []);
+  const metrics: Metric[] = [
+    { label: '待审核', value: overview?.pendingPosts ?? '—' },
+    { label: '今日生成', value: overview?.generationToday ?? '—' },
+    { label: '失败任务', value: overview?.failedGenerations ?? '—' },
+    { label: '社区帖子', value: overview?.communityPosts ?? '—' },
+  ];
   return (
-    <AdminShell title="内容审核工作台">
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-4" aria-label="本地演示指标">
+    <AdminShell
+      title="内容审核工作台"
+      onLogout={async () => {
+        await logoutAdmin();
+        onLoggedOut();
+      }}
+    >
+      <section className="mt-6 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-4" aria-label="运营指标">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}

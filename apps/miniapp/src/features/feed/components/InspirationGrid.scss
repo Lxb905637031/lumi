@@ -1,3 +1,88 @@
+.inspiration-feed {
+  padding-top: 28px;
+}
+
+.feed-toolbar,
+.feed-composer-actions,
+.feed-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.feed-heading,
+.feed-caption,
+.feed-state,
+.feed-card-title,
+.feed-card-body,
+.feed-card-meta,
+.feed-empty text {
+  display: block;
+}
+
+.feed-heading {
+  color: var(--lumi-color-ink);
+  font-size: 36px;
+  font-weight: 600;
+}
+
+.feed-caption,
+.feed-state,
+.feed-card-meta,
+.feed-empty text:last-child {
+  margin-top: 8px;
+  color: var(--lumi-color-muted);
+  font-size: 23px;
+}
+
+.feed-composer {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: 14px;
+  background: var(--lumi-color-surface);
+}
+
+.feed-input,
+.feed-textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: 10px;
+  background: #fffdfa;
+  color: var(--lumi-color-ink);
+  font-size: 26px;
+}
+
+.feed-textarea {
+  min-height: 180px;
+  margin-top: 14px;
+}
+
+.feed-upload-preview {
+  width: 180px;
+  height: 180px;
+  margin-top: 14px;
+  border-radius: 10px;
+}
+
+.feed-composer-actions {
+  margin-top: 18px;
+}
+
+.feed-image-button,
+.feed-action {
+  padding: 12px 18px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--lumi-color-ink);
+  font-size: 23px;
+}
+
 .inspiration-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -21,21 +106,54 @@
   font-size: 28px;
 }
 
-.feed-card-title,
-.feed-card-meta {
+.feed-post-image {
   display: block;
+  width: 100%;
+  height: 320px;
+  background: #e9e4dc;
+}
+
+.feed-image-empty {
+  background: #e9e4dc;
+  color: var(--lumi-color-muted);
+}
+
+.feed-card-title,
+.feed-card-body,
+.feed-card-meta {
   padding: 0 18px;
 }
 
 .feed-card-title {
   padding-top: 18px;
+  color: var(--lumi-color-ink);
   font-size: 27px;
   line-height: 1.4;
 }
 
+.feed-card-body {
+  padding-top: 10px;
+  color: var(--lumi-color-muted);
+  font-size: 23px;
+  line-height: 1.5;
+}
+
 .feed-card-meta {
   padding-top: 10px;
-  padding-bottom: 18px;
-  color: var(--lumi-color-muted);
-  font-size: 22px;
+  font-size: 21px;
+}
+
+.feed-card-actions {
+  justify-content: flex-start;
+  padding: 16px 18px 18px;
+}
+
+.feed-action {
+  padding: 8px 12px;
+  font-size: 20px;
+}
+
+.feed-empty {
+  padding: 120px 24px;
+  text-align: center;
 }

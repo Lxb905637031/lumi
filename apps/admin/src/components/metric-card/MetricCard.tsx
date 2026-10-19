@@ -1,6 +1,6 @@
 export type Metric = {
   label: string;
-  value: number;
+  value: number | string;
 };
 
 export function MetricCard({ label, value }: Metric) {

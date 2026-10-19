@@ -16,7 +16,7 @@ export default function Index() {
       <HomeHeader />
       <BottomNavigation activeTab={activeTab} onChange={setActiveTab} />
       {activeTab === '推荐' && <InspirationGrid />}
-      {activeTab === '试穿' && <QuickTryOnPanel />}
+      {activeTab === '试穿' && <QuickTryOnPanel onGoProfile={() => setActiveTab('我的')} />}
       {activeTab === '我的' && <ProfilePanel onStartTryOn={() => setActiveTab('试穿')} />}
     </View>
   );

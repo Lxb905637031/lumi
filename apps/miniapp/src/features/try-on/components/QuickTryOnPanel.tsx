@@ -4,7 +4,7 @@ import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeed
 import { useQuickTryOn } from '../useQuickTryOn';
 import './QuickTryOnPanel.scss';
 
-export function QuickTryOnPanel() {
+export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
   const { state, start, retry, cancel } = useQuickTryOn();
   const busy = state.kind === 'loading';
   const job = state.kind === 'idle' ? undefined : state.job;
@@ -13,7 +13,12 @@ export function QuickTryOnPanel() {
   return (
     <View className="try-on-empty-state">
       <Text className="try-on-empty-title">开始你的第一次试穿</Text>
-      <Text className="try-on-empty-copy">确认档案和衣橱后，生成一张可保存的试穿参考图。</Text>
+      <Text className="try-on-empty-copy">
+        先添加人物照片和衣物图片，再生成一张私有试穿参考图。当前免费环境使用本地预览 provider。
+      </Text>
+      <AppButton variant="secondary" onClick={onGoProfile}>
+        完善档案和衣橱
+      </AppButton>
       <AppButton loading={busy} onClick={start} disabled={busy}>
         {busy ? '生成中' : '开始免费试穿'}
       </AppButton>

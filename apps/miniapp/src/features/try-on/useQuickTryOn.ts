@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
 import Taro from '@tarojs/taro';
 import type { GenerationJob } from '@lumi/contracts';
-import { login } from '../auth/auth.api';
-import { createBodyProfile, listBodyProfiles } from '../body-profiles/body-profiles.api';
+import { ensureLogin } from '../auth/auth.api';
+import { listBodyProfiles } from '../body-profiles/body-profiles.api';
 import { cancelGeneration, createGeneration, getGeneration, retryGeneration } from '../generations/generations.api';
-import { createClothingItem, listClothingItems } from '../wardrobe/wardrobe.api';
+import { listClothingItems } from '../wardrobe/wardrobe.api';
 
 export type TryOnState =
   | { kind: 'idle' }
@@ -73,14 +73,13 @@ export function useQuickTryOn() {
     busyRef.current = true;
     setState({ kind: 'loading', message: '正在连接 Lumi…' });
     try {
-      await login();
+      await ensureLogin();
       const profiles = await listBodyProfiles();
-      const profile = profiles[0] ?? (await createBodyProfile({ name: '我的默认档案', heightCm: 165, weightKg: 52 }));
-      let profileVersionId = profiles[0]?.versions[0]?.id;
-      if (!profileVersionId && !profiles[0]) profileVersionId = profile.id;
-      if (!profileVersionId) throw new Error('身材档案缺少有效版本，请重新创建档案');
+      const profileVersionId = profiles[0]?.versions[0]?.id;
+      if (!profileVersionId) throw new Error('请先在“我的”中创建身材档案并添加至少一张人物照片');
       const clothingItems = await listClothingItems();
-      const clothing = clothingItems[0] ?? (await createClothingItem({ name: '日常上装', category: 'TOP' }));
+      const clothing = clothingItems[0];
+      if (!clothing) throw new Error('请先在“我的”中添加一件衣橱单品');
       idempotencyKeyRef.current ??= createIdempotencyKey();
       await run(
         createGeneration({
