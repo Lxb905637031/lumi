@@ -1,14 +1,49 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../common/auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthenticatedUser } from '../common/authenticated-request';
 import { CursorPaginationDto } from '../common/pagination/pagination.dto';
-import { CommunityQueryDto, CreateCommentDto, CreatePostDto, ReportPostDto, SetInteractionDto } from './community.dto';
+import {
+  CommunityQueryDto,
+  CreateCommentDto,
+  CreatePostDto,
+  ReportPostDto,
+  SetFollowDto,
+  SetInteractionDto,
+} from './community.dto';
 import { CommunityService } from './community.service';
+import { FollowService } from './follow.service';
 
 @Controller('community')
 export class CommunityController {
-  constructor(private readonly community: CommunityService) {}
+  constructor(
+    private readonly community: CommunityService,
+    private readonly follows: FollowService,
+  ) {}
+
+  @Put('users/:id/follow')
+  @UseGuards(AuthGuard)
+  follow(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: SetFollowDto) {
+    return this.follows.set(user.id, id, dto.active);
+  }
+
+  @Get('users/:id/follow-state')
+  @UseGuards(AuthGuard)
+  followState(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.follows.state(user.id, id);
+  }
+
+  @Get('me/followers')
+  @UseGuards(AuthGuard)
+  followers(@CurrentUser() user: AuthenticatedUser, @Query() query: CursorPaginationDto) {
+    return this.follows.list(user.id, 'followers', query);
+  }
+
+  @Get('me/following')
+  @UseGuards(AuthGuard)
+  following(@CurrentUser() user: AuthenticatedUser, @Query() query: CursorPaginationDto) {
+    return this.follows.list(user.id, 'following', query);
+  }
 
   @Get('posts')
   list(@Query() query: CommunityQueryDto) {

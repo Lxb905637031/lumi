@@ -14,6 +14,7 @@ const destinations = [
   ['我的帖子', '/pages/posts/index?collection=mine'],
   ['我的收藏', '/pages/posts/index?collection=bookmarks'],
   ['服务消息', '/pages/messages/index'],
+  ['关注与粉丝', '/pages/follows/index'],
 ] as const;
 
 export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {

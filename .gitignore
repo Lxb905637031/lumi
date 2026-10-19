@@ -11,6 +11,8 @@ coverage
 apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
 apps/miniapp/dist
+apps/miniapp/project.config.json
+apps/miniapp/project.private.config.json
 apps/admin/dist
 .playwright-cli
 output/playwright

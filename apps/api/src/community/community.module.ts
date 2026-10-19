@@ -4,11 +4,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { MediaModule } from '../media/media.module';
 import { CommunityController } from './community.controller';
 import { CommunityService } from './community.service';
+import { FollowService } from './follow.service';
 
 @Module({
   imports: [PrismaModule, MediaModule],
   controllers: [CommunityController],
-  providers: [AuthGuard, CommunityService],
+  providers: [AuthGuard, CommunityService, FollowService],
   exports: [CommunityService],
 })
 export class CommunityModule {}

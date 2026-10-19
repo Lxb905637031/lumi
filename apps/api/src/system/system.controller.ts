@@ -18,7 +18,7 @@ export class SystemController {
         generation: true,
         payments: false,
         community: true,
-        follows: false,
+        follows: true,
       },
     };
   }

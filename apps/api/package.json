@@ -15,6 +15,7 @@
     "test:try-on-client": "node --env-file-if-exists=../../.env --import tsx tests/try-on-client.integration.mjs",
     "test:results": "node --env-file-if-exists=../../.env tests/results-integration.mjs",
     "test:publishing-client": "node --env-file-if-exists=../../.env --import tsx tests/publishing-client.integration.mjs",
+    "test:follows": "node --env-file-if-exists=../../.env tests/follows-integration.mjs",
     "storage:init-local": "node --env-file-if-exists=../../.env scripts/init-local-storage.mjs",
     "db:generate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js generate --schema prisma/schema.prisma",
     "db:push": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js db push --schema prisma/schema.prisma",

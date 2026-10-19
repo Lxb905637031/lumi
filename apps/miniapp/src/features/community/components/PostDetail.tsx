@@ -6,6 +6,7 @@ import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeed
 import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceStatus';
 import { usePostDetail } from '../usePostDetail';
 import '../../feed/components/InspirationGrid.scss';
+import { FollowButton } from './FollowButton';
 
 export function PostDetail({ id }: { id: string }) {
   const detail = usePostDetail(id);
@@ -27,6 +28,7 @@ export function PostDetail({ id }: { id: string }) {
             {detail.post.authorName}
             {detail.post.isAiGenerated ? ' · AI 生成' : ''}
           </Text>
+          <FollowButton userId={detail.post.authorId} />
           {detail.post.imagePreviews.map((preview) => (
             <Image
               className="feed-post-image"

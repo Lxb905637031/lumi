@@ -8,6 +8,7 @@ export default defineAppConfig({
     'pages/posts/index',
     'pages/generations/index',
     'pages/messages/index',
+    'pages/follows/index',
   ],
   window: {
     navigationBarTitleText: 'Lumi',

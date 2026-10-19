@@ -49,6 +49,11 @@ export class SetInteractionDto {
   active!: boolean;
 }
 
+export class SetFollowDto {
+  @IsBoolean()
+  active!: boolean;
+}
+
 export class CreateCommentDto {
   @IsString()
   @Length(1, 1000)

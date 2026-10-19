@@ -192,12 +192,19 @@ export type CreateCommentInput = { body: string };
 
 export type Notification = {
   id: string;
-  type: 'SYSTEM' | 'MODERATION' | 'GENERATION';
+  type: 'SYSTEM' | 'MODERATION' | 'GENERATION' | 'FOLLOW';
   title: string;
   body: string;
   targetType: string | null;
   targetId: string | null;
   readAt: string | null;
+  createdAt: string;
+};
+
+export type CommunityUser = {
+  id: string;
+  displayName: string;
+  followed: boolean;
   createdAt: string;
 };
 

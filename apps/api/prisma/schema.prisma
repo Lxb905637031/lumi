@@ -39,6 +39,7 @@ enum NotificationType {
   SYSTEM
   MODERATION
   GENERATION
+  FOLLOW
 }
 
 enum ReportStatus {
@@ -91,6 +92,8 @@ model User {
   commentModerationActions CommentModerationAction[]
   adminCredential          AdminCredential?
   quotaAccount             QuotaAccount?
+  following               Follow[]                  @relation("Follower")
+  followers               Follow[]                  @relation("Following")
 
   @@map("users")
 }
@@ -447,4 +450,18 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followingId, createdAt, id])
+  @@index([followerId, createdAt, id])
+  @@map("follows")
 }
