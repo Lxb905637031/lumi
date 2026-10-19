@@ -32,6 +32,10 @@ apps/api/src/
   wardrobe/               # Controller / DTO / Service / Module
   generations/            # 用例编排、BullMQ 队列、provider 端口和本地适配器
   moderation/             # 管理审核队列、状态变更和审计记录
+  media/                  # 显式开发媒体适配与拥有权校验
+  community/              # 发布、Feed、评论、点赞、收藏和举报
+  notifications/          # 审核/生成消息与已读状态
+  operations/             # 后台运营指标，Controller -> Service -> Prisma
 
 apps/miniapp/src/
   app.tsx                 # 小程序应用入口
@@ -75,12 +79,13 @@ packages/contracts/src/    # 纯 TypeScript 公共契约
 - 异步提交必须可重试且幂等；队列生产实现需要持久化、失败重试、死信/人工恢复和状态观测。当前生成任务使用 Redis/BullMQ，`LocalGenerationProvider` 只用于免费开发和 CI，不能替代生产模型 provider。
 - 组件和函数聚焦单一职责；只有存在真实复用或边界价值时才抽象，不为目录整齐创建无行为的包装层。
 - 每个业务 feature 至少覆盖正常、空、加载、失败和重复提交测试；跨应用协议变化必须跑 API、miniapp、admin 的 typecheck/build。
-- 提交前统一运行 `pnpm check`：Prettier、ESLint、全 workspace typecheck、单测和三端构建。CI 另启 Postgres 执行 API smoke integration。
+- 提交前统一运行 `pnpm check`：Prettier、ESLint、全 workspace typecheck、单测和三端构建。CI 另启 Postgres 和 Redis 执行 API smoke integration。
 
 ## 当前边界与上线门槛
 
-- miniapp 的首页目前包含生成任务闭环联调：创建、轮询、结果预览、取消和同任务重试；视觉原型和静态 Feed 数据不能代表所有 JD 功能已经上线。
-- admin 已接入审核 API、权限和审计记录的开发垂直切片；未配置管理员 token 时仍显示本地预览，不能作为真实运营控制台使用。
+- miniapp 已拆分首页、档案、衣橱、发布、帖子详情、我的帖子/收藏、生成记录和消息路由，并接 API；未经微信运行时/真机验证，不能因路由存在就认定模块已交付。
+- admin 已使用账号密码登录、真实审核/指标数据和操作审计；开发浏览器验收不替代完整运营模块及生产安全验收。会话刷新须合并并行请求，失效须退出工作台。
 - `FREE_MODE=true` 只允许本地联调和 mock adapter。公开部署必须关闭并接入真实微信登录、媒体对象存储、审核、生成 provider、持久化队列、速率限制、备份与监控。
 - 生产发布需要数据库迁移审查、API 集成测试、真机小程序验收和后台权限验收。免费开发环境不等于免费生产容量，也不代表已经达到生产可用标准。
 - 发布候选验收以 [DEFINITION-OF-DONE.md](DEFINITION-OF-DONE.md) 为准；开发 fixture/mock 不得在用户界面或文档中伪装为生产数据与能力。
+- 全量 JD 和企业级要求的逐项状态以 [DELIVERY-MATRIX.md](DELIVERY-MATRIX.md) 为准；只将有验证证据且范围明确的子项标记为完成。

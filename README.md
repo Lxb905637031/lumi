@@ -30,7 +30,11 @@ API health check: `http://localhost:4300/api/v1/health`.
 
 The zero-budget development mode is enabled by `FREE_MODE=true`. It disables payment and allows the AI generation provider to be a local or mock implementation. A real public deployment still needs a stable HTTPS endpoint, storage, backups, moderation and model capacity.
 
-For local admin API checks, set `LOCAL_ADMIN_OPEN_IDS=admin-smoke` and use the free-mode login code `local:admin-smoke`. The admin console reads the moderation API only when `VITE_LUMI_ADMIN_ACCESS_TOKEN` is configured; otherwise it explicitly renders a development preview fixture. Local admin identifiers are rejected by production configuration validation.
+The admin console uses account/password login and real API data; it no longer uses a build-time token or preview fixtures. Provision a local account with `LUMI_ADMIN_USERNAME` and a self-generated `LUMI_ADMIN_PASSWORD` (12–256 characters) when running `pnpm --filter @lumi/api db:seed`, then start `pnpm dev:admin`. Never commit a real password. Password changes through this local provisioning command revoke previous sessions. The seed command is an explicit operator action, not an automatic production bootstrap.
+
+Prisma, seed and integration scripts load the workspace-root `.env` if present; existing environment variables take precedence. `db:push` is for local development only: versioned production migrations are still an open release gate. Real WeChat login, private object storage and a real AI provider have not been accepted.
+
+The current implementation/verification status is recorded in [the 80-item delivery checklist](docs/architecture/DELIVERY-MATRIX.md). API checks do not substitute for WeChat developer-tool, iOS or Android acceptance. Run `pnpm --filter @lumi/api test:integration` against the local running API, PostgreSQL and Redis; the script uses unique fixtures and cleans up only its own data. It refuses non-loopback API URLs and requires the API to report free development mode.
 
 ## Engineering rules
 
