@@ -1,247 +1,366 @@
 import assert from 'node:assert/strict';
+import { randomBytes, randomUUID, scrypt } from 'node:crypto';
+import { promisify } from 'node:util';
 import { PrismaClient } from '@prisma/client';
 
 const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4300/api/v1';
-const request = async (path, init = {}) => {
-  const response = await fetch(`${baseUrl}${path}`, {
+assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(new URL(baseUrl).hostname), 'Smoke tests are local-only');
+const prisma = new PrismaClient();
+const fixtureUsers = new Set();
+const runId = randomUUID();
+const passed = [];
+let requestCount = 0;
+
+async function request(path, expectedStatus = 200, init = {}) {
+  requestCount += 1;
+  const response = await fetch(baseUrl + path, {
     ...init,
-    headers: { 'content-type': 'application/json', ...(init.headers ?? {}) },
+    signal: AbortSignal.timeout(15_000),
+    headers: { ...(init.body !== undefined ? { 'content-type': 'application/json' } : {}), ...(init.headers ?? {}) },
   });
   const body = await response.json();
-  return { response, body };
-};
+  assert.equal(response.status, expectedStatus, path + ': ' + JSON.stringify(body));
+  return body;
+}
 
-const health = await request('/health');
-assert.equal(health.response.status, 200);
-assert.equal(health.body.service, 'lumi-api');
+function write(method, headers, data = {}) {
+  return { method, headers, body: JSON.stringify(data) };
+}
 
-const bootstrap = await request('/system/bootstrap');
-assert.equal(bootstrap.response.status, 200);
-assert.equal(bootstrap.body.freeMode, true);
+function authorization(session) {
+  return { authorization: 'Bearer ' + session.accessToken };
+}
 
-const allowedOrigin = await fetch(`${baseUrl}/health`, {
-  headers: { origin: 'http://localhost:5173' },
-});
-assert.equal(allowedOrigin.headers.get('access-control-allow-origin'), 'http://localhost:5173');
-const rejectedOrigin = await fetch(`${baseUrl}/health`, {
-  headers: { origin: 'https://attacker.example' },
-});
-assert.equal(rejectedOrigin.headers.get('access-control-allow-origin'), null);
+async function login(label) {
+  const session = await request('/auth/wechat/login', 201, write('POST', {}, { code: 'local:' + runId + '-' + label }));
+  fixtureUsers.add(session.user.id);
+  return session;
+}
 
-const login = await request('/auth/wechat/login', {
-  method: 'POST',
-  body: JSON.stringify({ code: `local:smoke-${Date.now()}` }),
-});
-assert.equal(login.response.status, 201);
-assert.ok(login.body.accessToken);
-assert.equal(login.body.freeMode, true);
-const authorization = { authorization: `Bearer ${login.body.accessToken}` };
+async function waitForJob(id, headers) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const job = await request('/generation-jobs/' + id, 200, { headers });
+    if (['SUCCEEDED', 'FAILED', 'DEAD_LETTER', 'CANCELLED'].includes(job.status)) return job;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  assert.fail('Generation did not reach a terminal state: ' + id);
+}
 
-const unauthorized = await request('/body-profiles');
-assert.equal(unauthorized.response.status, 401);
+try {
+  const health = await request('/health');
+  assert.equal(health.service, 'lumi-api');
+  const bootstrap = await request('/system/bootstrap');
+  assert.equal(bootstrap.freeMode, true, 'Never run fixture mutations against a production API');
+  const allowed = await fetch(baseUrl + '/health', { headers: { origin: 'http://localhost:5173' } });
+  assert.equal(allowed.headers.get('access-control-allow-origin'), 'http://localhost:5173');
+  const rejected = await fetch(baseUrl + '/health', { headers: { origin: 'https://attacker.example' } });
+  assert.equal(rejected.headers.get('access-control-allow-origin'), null);
+  passed.push('health and CORS allowlist');
 
-const invalidPagination = await request('/body-profiles?limit=100', {
-  headers: authorization,
-});
-assert.equal(invalidPagination.response.status, 400);
-const invalidCursor = await request('/body-profiles?cursor=not-a-valid-cursor', { headers: authorization });
-assert.equal(invalidCursor.response.status, 400);
+  const owner = await login('owner');
+  const outsider = await login('outsider');
+  const ownerAuth = authorization(owner);
+  const outsiderAuth = authorization(outsider);
+  await request('/body-profiles', 401);
+  await request('/body-profiles?limit=100', 400, { headers: ownerAuth });
+  await request('/body-profiles?cursor=invalid', 400, { headers: ownerAuth });
+  await request('/admin/overview', 403, { headers: ownerAuth });
+  await request('/admin/moderation/comments', 403, { headers: ownerAuth });
 
-const profileResult = await request('/body-profiles', {
-  method: 'POST',
-  headers: authorization,
-  body: JSON.stringify({ name: 'Smoke Profile', heightCm: 165, weightKg: 52 }),
-});
-assert.equal(profileResult.response.status, 201);
-const profileVersionId = profileResult.body.id;
-assert.ok(profileVersionId);
-const profilesPage = await request('/body-profiles?limit=5', {
-  headers: authorization,
-});
-assert.equal(profilesPage.response.status, 200);
-assert.ok(Array.isArray(profilesPage.body.items));
-assert.equal(profilesPage.body.items.length, 1);
-assert.equal(profilesPage.body.nextCursor, null);
-
-for (let index = 0; index < 3; index += 1) {
-  await request('/body-profiles', {
-    method: 'POST',
-    headers: authorization,
-    body: JSON.stringify({ name: `Pagination Profile ${index}` }),
+  const password = randomBytes(24).toString('hex');
+  const salt = randomBytes(16).toString('hex');
+  const derived = await promisify(scrypt)(password, salt, 64);
+  const username = 'smoke-' + runId;
+  const admin = await prisma.user.create({
+    data: {
+      wxOpenId: 'fixture-admin:' + runId,
+      role: 'ADMIN',
+      adminCredential: { create: { username, passwordHash: 'scrypt$' + salt + '$' + derived.toString('hex') } },
+    },
   });
-}
-const firstProfilePage = await request('/body-profiles?limit=2', {
-  headers: authorization,
-});
-assert.equal(firstProfilePage.body.items.length, 2);
-assert.ok(firstProfilePage.body.nextCursor);
-const secondProfilePage = await request(
-  `/body-profiles?limit=2&cursor=${encodeURIComponent(firstProfilePage.body.nextCursor)}`,
-  { headers: authorization },
-);
-assert.ok(secondProfilePage.body.items.length > 0);
-assert.equal(
-  firstProfilePage.body.items.some((item) => item.id === secondProfilePage.body.items[0].id),
-  false,
-);
+  fixtureUsers.add(admin.id);
+  await request('/auth/admin/login', 401, write('POST', {}, { username, password: 'incorrect-password' }));
+  const adminSession = await request('/auth/admin/login', 201, write('POST', {}, { username, password }));
+  const adminAuth = authorization(adminSession);
+  assert.equal(adminSession.user.role, 'ADMIN');
+  const overview = await request('/admin/overview', 200, { headers: adminAuth });
+  for (const metric of ['pendingPosts', 'generationToday', 'failedGenerations', 'communityPosts', 'openReports']) {
+    assert.equal(typeof overview[metric], 'number');
+  }
+  passed.push('password admin login, RBAC and persisted overview');
 
-const clothing = await request('/wardrobe/items', {
-  method: 'POST',
-  headers: authorization,
-  body: JSON.stringify({ name: 'Smoke Top', category: 'TOP' }),
-});
-assert.equal(clothing.response.status, 201);
-const clothingPage = await request('/wardrobe/items?limit=5', {
-  headers: authorization,
-});
-assert.equal(clothingPage.response.status, 200);
-assert.equal(clothingPage.body.items.length, 1);
+  const png = {
+    fileName: 'smoke.png',
+    mimeType: 'image/png',
+    base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL7sAAAAASUVORK5CYII=',
+  };
+  const image = await request('/media/assets', 201, write('POST', ownerAuth, png));
+  assert.equal(image.visibility, 'PRIVATE');
+  await request('/media/assets/' + image.id, 404, { headers: outsiderAuth });
+  await request('/media/assets/' + image.id, 404, { method: 'DELETE', headers: outsiderAuth });
+  await request(
+    '/media/assets',
+    400,
+    write('POST', ownerAuth, { ...png, base64: Buffer.from('not an image').toString('base64') }),
+  );
+  await request('/body-profiles', 404, write('POST', outsiderAuth, { name: 'Foreign image', sourceAssetId: image.id }));
+  await request(
+    '/wardrobe/items',
+    404,
+    write('POST', outsiderAuth, { name: 'Foreign image', category: 'TOP', assetId: image.id }),
+  );
+  passed.push('development media ownership and invalid image rejection');
 
-const prisma = new PrismaClient();
-const moderationPost = await prisma.post.create({
-  data: {
-    authorId: login.body.user.id,
-    title: `Smoke moderation ${Date.now()}`,
-    body: 'A moderation queue integration fixture created by the smoke test.',
-  },
-});
-await prisma.$disconnect();
+  const profileInput = {
+    name: 'Smoke Profile',
+    heightCm: 165,
+    weightKg: 52,
+    shoulderCm: 39,
+    bustCm: 88,
+    waistCm: 70,
+    hipCm: 94,
+    sourceAssetId: image.id,
+  };
+  const profileVersion = await request('/body-profiles', 201, write('POST', ownerAuth, profileInput));
+  const profileId = profileVersion.profileId;
+  assert.equal(profileVersion.measurements.shoulderCm, 39);
+  await request('/body-profiles/' + profileId, 404, { headers: outsiderAuth });
+  const updatedProfile = await request(
+    '/body-profiles/' + profileId,
+    200,
+    write('PATCH', ownerAuth, {
+      ...profileInput,
+      expectedVersion: 1,
+      heightCm: 166,
+    }),
+  );
+  assert.equal(updatedProfile.version, 2);
+  await request('/body-profiles/' + profileId, 409, write('PATCH', ownerAuth, { ...profileInput, expectedVersion: 1 }));
+  const profileAfterConflict = await request('/body-profiles/' + profileId, 200, { headers: ownerAuth });
+  assert.equal(profileAfterConflict.activeVersion, 2);
 
-const forbiddenModeration = await request('/admin/moderation/posts', {
-  headers: authorization,
-});
-assert.equal(forbiddenModeration.response.status, 403);
-
-const adminLogin = await request('/auth/wechat/login', {
-  method: 'POST',
-  body: JSON.stringify({ code: 'local:admin-smoke' }),
-});
-assert.equal(adminLogin.response.status, 201);
-assert.equal(adminLogin.body.user.role, 'ADMIN');
-const adminAuthorization = { authorization: `Bearer ${adminLogin.body.accessToken}` };
-const moderationPage = await request('/admin/moderation/posts?limit=5', {
-  headers: adminAuthorization,
-});
-assert.equal(moderationPage.response.status, 200);
-assert.ok(moderationPage.body.items.some((item) => item.id === moderationPost.id));
-
-const moderationUpdate = await request(`/admin/moderation/posts/${moderationPost.id}/status`, {
-  method: 'PATCH',
-  headers: adminAuthorization,
-  body: JSON.stringify({ status: 'APPROVED', reason: 'Smoke test approval' }),
-});
-assert.equal(moderationUpdate.response.status, 200);
-assert.equal(moderationUpdate.body.status, 'APPROVED');
-const repeatedModerationUpdate = await request(`/admin/moderation/posts/${moderationPost.id}/status`, {
-  method: 'PATCH',
-  headers: adminAuthorization,
-  body: JSON.stringify({ status: 'APPROVED' }),
-});
-assert.equal(repeatedModerationUpdate.response.status, 200);
-assert.equal(repeatedModerationUpdate.body.status, 'APPROVED');
-
-const jobInput = {
-  profileVersionId,
-  clothingAssetId: clothing.body.id,
-  idempotencyKey: `smoke-${Date.now()}-key`,
-};
-const createdJob = await request('/generation-jobs', {
-  method: 'POST',
-  headers: authorization,
-  body: JSON.stringify(jobInput),
-});
-assert.equal(createdJob.response.status, 201);
-const duplicateJob = await request('/generation-jobs', {
-  method: 'POST',
-  headers: authorization,
-  body: JSON.stringify(jobInput),
-});
-assert.equal(duplicateJob.response.status, 201);
-assert.equal(duplicateJob.body.id, createdJob.body.id);
-const jobsPage = await request('/generation-jobs?limit=5', {
-  headers: authorization,
-});
-assert.equal(jobsPage.response.status, 200);
-assert.equal(jobsPage.body.items.length, 1);
-
-let job = createdJob.body;
-for (
-  let attempt = 0;
-  attempt < 12 && !['SUCCEEDED', 'FAILED', 'DEAD_LETTER', 'CANCELLED'].includes(job.status);
-  attempt += 1
-) {
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  const result = await request(`/generation-jobs/${job.id}`, {
-    headers: authorization,
+  for (let index = 0; index < 3; index += 1) {
+    await request('/body-profiles', 201, write('POST', ownerAuth, { name: 'Pagination ' + index }));
+  }
+  const firstPage = await request('/body-profiles?limit=2', 200, { headers: ownerAuth });
+  const secondPage = await request('/body-profiles?limit=2&cursor=' + encodeURIComponent(firstPage.nextCursor), 200, {
+    headers: ownerAuth,
   });
-  assert.equal(result.response.status, 200);
-  job = result.body;
+  assert.equal(firstPage.items.length, 2);
+  assert.equal(secondPage.items.length, 2);
+  assert.equal(new Set([...firstPage.items, ...secondPage.items].map((item) => item.id)).size, 4);
+  const clothing = await request(
+    '/wardrobe/items',
+    201,
+    write('POST', ownerAuth, { name: 'Smoke Top', category: 'TOP', assetId: image.id }),
+  );
+  const updatedClothing = await request(
+    '/wardrobe/items/' + clothing.id,
+    200,
+    write('PATCH', ownerAuth, {
+      name: 'Updated Top',
+      category: 'TOP',
+      color: 'white',
+      style: 'minimal',
+    }),
+  );
+  assert.equal(updatedClothing.color, 'white');
+  await request('/wardrobe/items/' + clothing.id, 404, { headers: outsiderAuth });
+  await request(
+    '/wardrobe/items/' + clothing.id,
+    404,
+    write('PATCH', outsiderAuth, { name: 'Stolen', category: 'TOP' }),
+  );
+  passed.push('six measurements, version conflicts, wardrobe edits and cursor pagination');
+
+  const jobInput = {
+    profileVersionId: updatedProfile.id,
+    clothingAssetId: clothing.id,
+    idempotencyKey: runId + '-job',
+  };
+  await request(
+    '/generation-jobs',
+    404,
+    write('POST', outsiderAuth, { ...jobInput, idempotencyKey: runId + '-foreign' }),
+  );
+  const createdJob = await request('/generation-jobs', 201, write('POST', ownerAuth, jobInput));
+  const duplicateJob = await request('/generation-jobs', 201, write('POST', ownerAuth, jobInput));
+  assert.equal(duplicateJob.id, createdJob.id);
+  await request('/generation-jobs/' + createdJob.id, 404, { headers: outsiderAuth });
+  const job = await waitForJob(createdJob.id, ownerAuth);
+  assert.equal(job.status, 'SUCCEEDED');
+  assert.equal(job.provider, 'local-svg');
+  assert.equal(job.outputs.length, 1);
+  assert.equal(job.outputs[0].visibility, 'PRIVATE');
+  assert.match(job.outputs[0].previewData, /^data:image\/svg\+xml;base64,/);
+  const recovery = await prisma.generationJob.create({
+    data: {
+      userId: owner.user.id,
+      profileVersionId: updatedProfile.id,
+      clothingAssetId: clothing.id,
+      idempotencyKey: runId + '-retry',
+      provider: 'local-svg',
+      status: 'DEAD_LETTER',
+    },
+  });
+  await request('/generation-jobs/' + recovery.id + '/retry', 201, write('POST', ownerAuth));
+  assert.equal((await waitForJob(recovery.id, ownerAuth)).status, 'SUCCEEDED');
+  const cancellable = await prisma.generationJob.create({
+    data: {
+      userId: owner.user.id,
+      profileVersionId: updatedProfile.id,
+      clothingAssetId: clothing.id,
+      idempotencyKey: runId + '-cancel',
+      provider: 'local-svg',
+      status: 'QUEUED',
+    },
+  });
+  assert.equal(
+    (await request('/generation-jobs/' + cancellable.id + '/cancel', 201, write('POST', ownerAuth))).status,
+    'CANCELLED',
+  );
+  assert.equal(
+    (await request('/generation-jobs/' + cancellable.id + '/cancel', 201, write('POST', ownerAuth))).status,
+    'CANCELLED',
+  );
+  passed.push('durable development generation, idempotency, recovery and cancellation');
+
+  const postInput = {
+    title: 'Smoke community post',
+    body: 'HTTP acceptance fixture',
+    imageAssetIds: [image.id],
+    topic: runId,
+    isAiGenerated: true,
+  };
+  await request('/community/posts', 400, write('POST', ownerAuth, { title: 'No images', body: 'Rejected' }));
+  const post = await request('/community/posts', 201, write('POST', ownerAuth, postInput));
+  await request('/community/posts/' + post.id, 404);
+  const ownPosts = await request('/community/me/posts?limit=5', 200, { headers: ownerAuth });
+  assert.ok(ownPosts.items.some((item) => item.id === post.id && item.moderationStatus === 'PENDING'));
+  const feedBefore = await request('/community/posts?topic=' + runId);
+  assert.equal(feedBefore.items.length, 0);
+  await request(
+    '/admin/moderation/posts/' + post.id + '/status',
+    403,
+    write('PATCH', ownerAuth, { status: 'APPROVED' }),
+  );
+  await request(
+    '/admin/moderation/posts/' + post.id + '/status',
+    200,
+    write('PATCH', adminAuth, { status: 'APPROVED', reason: 'Acceptance approval' }),
+  );
+  await request(
+    '/admin/moderation/posts/' + post.id + '/status',
+    200,
+    write('PATCH', adminAuth, { status: 'APPROVED' }),
+  );
+  assert.equal(await prisma.moderationAction.count({ where: { postId: post.id } }), 1);
+  const feed = await request('/community/posts?topic=' + runId + '&limit=1');
+  assert.equal(feed.items.length, 1);
+  assert.equal(feed.items[0].imagePreviews.length, 1);
+  assert.equal(JSON.stringify(feed).includes(owner.user.openId), false, 'Public responses must not leak WeChat OpenID');
+  const likes = await Promise.all(
+    Array.from({ length: 3 }, () =>
+      request('/community/posts/' + post.id + '/like', 201, write('POST', ownerAuth, { active: true })),
+    ),
+  );
+  assert.ok(likes.every((result) => result.liked === true));
+  assert.equal((await request('/community/posts/' + post.id)).likeCount, 1);
+  await request('/community/posts/' + post.id + '/bookmark', 201, write('POST', ownerAuth, { active: true }));
+  await request('/community/posts/' + post.id + '/bookmark', 201, write('POST', ownerAuth, { active: true }));
+  const bookmarks = await request('/community/me/bookmarks?limit=5', 200, { headers: ownerAuth });
+  assert.ok(bookmarks.items.some((item) => item.id === post.id));
+  assert.deepEqual(await request('/community/posts/' + post.id + '/state', 200, { headers: ownerAuth }), {
+    liked: true,
+    bookmarked: true,
+  });
+  passed.push('publish, pending isolation, approval audit, feed, idempotent likes and bookmarks');
+
+  const comment = await request(
+    '/community/posts/' + post.id + '/comments',
+    201,
+    write('POST', ownerAuth, { body: 'Pending comment' }),
+  );
+  const commentsBefore = await request('/community/posts/' + post.id + '/comments?limit=5');
+  assert.equal(commentsBefore.items.length, 0);
+  assert.equal((await request('/community/posts/' + post.id)).commentCount, 0);
+  await request(
+    '/admin/moderation/comments/' + comment.id + '/status',
+    403,
+    write('PATCH', ownerAuth, { status: 'APPROVED' }),
+  );
+  const commentQueue = await request('/admin/moderation/comments?status=PENDING&limit=50', 200, { headers: adminAuth });
+  assert.ok(commentQueue.items.some((item) => item.id === comment.id));
+  await request(
+    '/admin/moderation/comments/' + comment.id + '/status',
+    200,
+    write('PATCH', adminAuth, { status: 'APPROVED', reason: 'Acceptance approval' }),
+  );
+  await request(
+    '/admin/moderation/comments/' + comment.id + '/status',
+    200,
+    write('PATCH', adminAuth, { status: 'APPROVED' }),
+  );
+  assert.equal(await prisma.commentModerationAction.count({ where: { commentId: comment.id } }), 1);
+  const commentsAfter = await request('/community/posts/' + post.id + '/comments?limit=5');
+  assert.equal(commentsAfter.items[0].id, comment.id);
+  assert.equal((await request('/community/posts/' + post.id)).commentCount, 1);
+  await request('/community/comments/' + comment.id, 404, { method: 'DELETE', headers: outsiderAuth });
+  await request('/community/posts/' + post.id + '/reports', 201, write('POST', ownerAuth, { reason: 'OTHER' }));
+  await request('/community/posts/' + post.id + '/reports', 409, write('POST', ownerAuth, { reason: 'OTHER' }));
+  await request('/community/comments/' + comment.id, 200, { method: 'DELETE', headers: ownerAuth });
+  assert.equal((await request('/community/posts/' + post.id)).commentCount, 0);
+  passed.push('comment moderation isolation, filtered counts, audits, deletion and report submission');
+
+  const notifications = await request('/notifications?limit=20', 200, { headers: ownerAuth });
+  const unread = await request('/notifications/unread-count', 200, { headers: ownerAuth });
+  assert.ok(unread.count >= 3);
+  const notification = notifications.items.find((item) => item.targetId === post.id);
+  assert.ok(notification);
+  await request('/notifications/' + notification.id + '/read', 404, write('PATCH', outsiderAuth));
+  await request('/notifications/' + notification.id + '/read', 200, write('PATCH', ownerAuth));
+  await request('/notifications/' + notification.id + '/read', 200, write('PATCH', ownerAuth));
+  assert.equal((await request('/notifications/unread-count', 200, { headers: ownerAuth })).count, unread.count - 1);
+  await request('/notifications/read-all', 200, write('PATCH', ownerAuth));
+  assert.equal((await request('/notifications/unread-count', 200, { headers: ownerAuth })).count, 0);
+  passed.push('system notification targets, unread counts, single and bulk read ownership');
+
+  await request('/community/posts/' + post.id, 404, { method: 'DELETE', headers: outsiderAuth });
+  await request('/community/posts/' + post.id, 200, { method: 'DELETE', headers: ownerAuth });
+  await request('/community/posts/' + post.id, 404);
+  await request('/body-profiles/' + profileId, 200, { method: 'DELETE', headers: ownerAuth });
+  await request(
+    '/generation-jobs',
+    404,
+    write('POST', ownerAuth, { ...jobInput, idempotencyKey: runId + '-archived' }),
+  );
+  await request('/wardrobe/items/' + clothing.id, 200, { method: 'DELETE', headers: ownerAuth });
+  const disposable = await request('/media/assets', 201, write('POST', ownerAuth, png));
+  await request('/media/assets/' + disposable.id, 200, { method: 'DELETE', headers: ownerAuth });
+  await request('/media/assets/' + disposable.id, 404, { headers: ownerAuth });
+  passed.push('owned content deletion and inactive generation input rejection');
+
+  const rotated = await request('/auth/refresh', 201, write('POST', {}, { refreshToken: owner.refreshToken }));
+  assert.notEqual(rotated.refreshToken, owner.refreshToken);
+  await request('/body-profiles', 200, { headers: authorization(rotated) });
+  await request('/auth/refresh', 401, write('POST', {}, { refreshToken: owner.refreshToken }));
+  await request('/body-profiles', 401, { headers: authorization(rotated) });
+  await request('/auth/logout', 200, write('POST', outsiderAuth));
+  await request('/body-profiles', 401, { headers: outsiderAuth });
+  await prisma.user.update({ where: { id: owner.user.id }, data: { status: 'SUSPENDED' } });
+  await request('/auth/wechat/login', 401, write('POST', {}, { code: 'local:' + runId + '-owner' }));
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: owner.user.id } })).status, 'SUSPENDED');
+  passed.push('refresh rotation, replay revocation, logout and suspended login denial');
+
+  console.log(JSON.stringify({ mode: 'FREE_MODE/local-svg only', requestCount, passed }, null, 2));
+} finally {
+  const userIds = [...fixtureUsers];
+  if (userIds.length) {
+    // Only data created by this run is removed; existing users and content are never reset.
+    await prisma.commentModerationAction.deleteMany({ where: { actorId: { in: userIds } } });
+    await prisma.generationJob.deleteMany({ where: { userId: { in: userIds } } });
+    await prisma.post.deleteMany({ where: { authorId: { in: userIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+  }
+  await prisma.$disconnect();
 }
-assert.equal(job.status, 'SUCCEEDED');
-assert.equal(job.outputs.length, 1);
-assert.equal(job.outputs[0].mimeType, 'image/svg+xml');
-assert.match(job.outputs[0].previewData, /^data:image\/svg\+xml;base64,/);
-
-const recoveryPrisma = new PrismaClient();
-const deadLetterFixture = await recoveryPrisma.generationJob.create({
-  data: {
-    userId: login.body.user.id,
-    profileVersionId,
-    clothingAssetId: clothing.body.id,
-    idempotencyKey: `smoke-retry-${Date.now()}`,
-    provider: 'local-svg',
-    status: 'DEAD_LETTER',
-    errorCode: 'PROVIDER_UNAVAILABLE',
-  },
-});
-const cancelledFixture = await recoveryPrisma.generationJob.create({
-  data: {
-    userId: login.body.user.id,
-    profileVersionId,
-    clothingAssetId: clothing.body.id,
-    idempotencyKey: `smoke-cancel-${Date.now()}`,
-    provider: 'local-svg',
-    status: 'QUEUED',
-  },
-});
-await recoveryPrisma.$disconnect();
-
-const retriedJob = await request(`/generation-jobs/${deadLetterFixture.id}/retry`, {
-  method: 'POST',
-  headers: authorization,
-  body: JSON.stringify({}),
-});
-assert.equal(retriedJob.response.status, 201);
-assert.ok(['QUEUED', 'RUNNING', 'SUCCEEDED'].includes(retriedJob.body.status));
-const cancelledJob = await request(`/generation-jobs/${cancelledFixture.id}/cancel`, {
-  method: 'POST',
-  headers: authorization,
-  body: JSON.stringify({}),
-});
-assert.equal(cancelledJob.response.status, 201);
-assert.equal(cancelledJob.body.status, 'CANCELLED');
-
-let recovered = retriedJob.body;
-for (
-  let attempt = 0;
-  attempt < 12 && !['SUCCEEDED', 'FAILED', 'DEAD_LETTER', 'CANCELLED'].includes(recovered.status);
-  attempt += 1
-) {
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  const result = await request(`/generation-jobs/${deadLetterFixture.id}`, { headers: authorization });
-  assert.equal(result.response.status, 200);
-  recovered = result.body;
-}
-assert.equal(recovered.status, 'SUCCEEDED');
-
-console.log(
-  JSON.stringify({
-    health: 'ok',
-    login: 'ok',
-    profile: 'ok',
-    clothing: 'ok',
-    generation: job.status,
-    idempotency: 'ok',
-    moderation: 'ok',
-  }),
-);

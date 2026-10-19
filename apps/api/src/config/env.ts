@@ -1,5 +1,15 @@
 import { plainToInstance, Type } from 'class-transformer';
-import { IsBooleanString, IsInt, IsOptional, IsString, Min, Max, MinLength, validateSync } from 'class-validator';
+import {
+  IsBooleanString,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Min,
+  Max,
+  MinLength,
+  validateSync,
+} from 'class-validator';
 
 class Environment {
   @IsOptional()
@@ -29,6 +39,18 @@ class Environment {
   @IsString()
   @MinLength(32)
   JWT_ACCESS_SECRET!: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(?:[1-9]|[1-5][0-9]|60)m$/)
+  JWT_ACCESS_TTL = '15m';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(180)
+  REFRESH_TOKEN_TTL_DAYS = 30;
 
   @IsOptional()
   @IsString()

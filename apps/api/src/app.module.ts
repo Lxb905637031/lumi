@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +13,10 @@ import { BodyProfilesModule } from './body-profiles/body-profiles.module';
 import { GenerationsModule } from './generations/generations.module';
 import { WardrobeModule } from './wardrobe/wardrobe.module';
 import { ModerationModule } from './moderation/moderation.module';
+import { MediaModule } from './media/media.module';
+import { CommunityModule } from './community/community.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { OperationsModule } from './operations/operations.module';
 
 @Module({
   imports: [
@@ -20,13 +26,14 @@ import { ModerationModule } from './moderation/moderation.module';
       cache: true,
       validate: validateEnvironment,
     }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         signOptions: {
-          expiresIn: '1h',
+          expiresIn: config.getOrThrow<string>('JWT_ACCESS_TTL'),
           issuer: 'lumi-api',
           audience: 'lumi-miniapp',
         },
@@ -41,6 +48,11 @@ import { ModerationModule } from './moderation/moderation.module';
     GenerationsModule,
     WardrobeModule,
     ModerationModule,
+    MediaModule,
+    CommunityModule,
+    NotificationsModule,
+    OperationsModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

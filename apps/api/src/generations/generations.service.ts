@@ -55,11 +55,11 @@ export class GenerationsService {
     }
 
     const profileVersion = await this.prisma.bodyProfileVersion.findFirst({
-      where: { id: input.profileVersionId, profile: { userId } },
+      where: { id: input.profileVersionId, profile: { userId, archivedAt: null } },
     });
     if (!profileVersion) throw new NotFoundException('身材档案版本不存在');
     const clothingItem = await this.prisma.clothingItem.findFirst({
-      where: { id: input.clothingAssetId, userId },
+      where: { id: input.clothingAssetId, userId, deletedAt: null },
     });
     if (!clothingItem) throw new NotFoundException('衣物资料不存在');
 

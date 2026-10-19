@@ -35,35 +35,70 @@ enum ModerationStatus {
   REMOVED
 }
 
+enum NotificationType {
+  SYSTEM
+  MODERATION
+  GENERATION
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
 model User {
-  id                String             @id @default(cuid())
-  wxOpenId          String             @unique @map("wx_open_id")
-  status            UserStatus         @default(ACTIVE)
-  role              UserRole           @default(USER)
-  createdAt         DateTime           @default(now()) @map("created_at")
-  updatedAt         DateTime           @updatedAt @map("updated_at")
-  profiles          BodyProfile[]
-  assets            MediaAsset[]
-  jobs              GenerationJob[]
-  posts             Post[]
-  comments          Comment[]
-  sessions          UserSession[]
-  clothingItems     ClothingItem[]
-  moderationActions ModerationAction[] @relation("ModerationActor")
+  id                       String                    @id @default(cuid())
+  wxOpenId                 String                    @unique @map("wx_open_id")
+  status                   UserStatus                @default(ACTIVE)
+  role                     UserRole                  @default(USER)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  profiles                 BodyProfile[]
+  assets                   MediaAsset[]
+  jobs                     GenerationJob[]
+  posts                    Post[]
+  comments                 Comment[]
+  sessions                 UserSession[]
+  clothingItems            ClothingItem[]
+  moderationActions        ModerationAction[]        @relation("ModerationActor")
+  likes                    PostLike[]
+  bookmarks                PostBookmark[]
+  reports                  PostReport[]
+  notifications            Notification[]
+  commentModerationActions CommentModerationAction[]
+  adminCredential          AdminCredential?
 
   @@map("users")
 }
 
 model UserSession {
-  id               String   @id @default(cuid())
-  userId           String   @map("user_id")
-  refreshTokenHash String   @map("refresh_token_hash")
-  expiresAt        DateTime @map("expires_at")
-  createdAt        DateTime @default(now()) @map("created_at")
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(cuid())
+  userId              String    @map("user_id")
+  refreshTokenHash    String    @unique @map("refresh_token_hash")
+  expiresAt           DateTime  @map("expires_at")
+  revokedAt           DateTime? @map("revoked_at")
+  replacedBySessionId String?   @map("replaced_by_session_id")
+  lastUsedAt          DateTime? @map("last_used_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+  @@index([userId, revokedAt])
   @@map("user_sessions")
+}
+
+model AdminCredential {
+  id           String    @id @default(cuid())
+  userId       String    @unique @map("user_id")
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  disabledAt   DateTime? @map("disabled_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_credentials")
 }
 
 model BodyProfile {
@@ -71,6 +106,7 @@ model BodyProfile {
   userId        String               @map("user_id")
   name          String
   activeVersion Int                  @default(1) @map("active_version")
+  archivedAt    DateTime?            @map("archived_at")
   createdAt     DateTime             @default(now()) @map("created_at")
   updatedAt     DateTime             @updatedAt @map("updated_at")
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -117,7 +153,10 @@ model ClothingItem {
   userId    String          @map("user_id")
   name      String
   category  String
+  color     String?
+  style     String?
   assetId   String?         @map("asset_id")
+  deletedAt DateTime?       @map("deleted_at")
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -171,14 +210,24 @@ model Post {
   authorId          String             @map("author_id")
   title             String
   body              String
+  imageAssetIds     Json               @default("[]") @map("image_asset_ids")
+  topic             String?
+  isAiGenerated     Boolean            @default(false) @map("is_ai_generated")
+  featuredAt        DateTime?          @map("featured_at")
   moderationStatus  ModerationStatus   @default(PENDING) @map("moderation_status")
+  deletedAt         DateTime?          @map("deleted_at")
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
   author            User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments          Comment[]
   moderationActions ModerationAction[]
+  likes             PostLike[]
+  bookmarks         PostBookmark[]
+  reports           PostReport[]
 
   @@index([moderationStatus, createdAt])
+  @@index([topic, moderationStatus, createdAt])
+  @@index([authorId, createdAt])
   @@map("posts")
 }
 
@@ -199,15 +248,90 @@ model ModerationAction {
 }
 
 model Comment {
-  id        String   @id @default(cuid())
-  postId    String   @map("post_id")
-  authorId  String   @map("author_id")
-  body      String
-  parentId  String?  @map("parent_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id                String                    @id @default(cuid())
+  postId            String                    @map("post_id")
+  authorId          String                    @map("author_id")
+  body              String
+  parentId          String?                   @map("parent_id")
+  moderationStatus  ModerationStatus          @default(PENDING) @map("moderation_status")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  post              Post                      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author            User                      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  moderationActions CommentModerationAction[]
 
   @@index([postId, createdAt])
   @@map("comments")
+}
+
+model CommentModerationAction {
+  id         String           @id @default(cuid())
+  commentId  String           @map("comment_id")
+  actorId    String           @map("actor_id")
+  fromStatus ModerationStatus @map("from_status")
+  toStatus   ModerationStatus @map("to_status")
+  reason     String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  comment    Comment          @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  actor      User             @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([commentId, createdAt])
+  @@map("comment_moderation_actions")
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+  @@map("post_likes")
+}
+
+model PostBookmark {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+  @@map("post_bookmarks")
+}
+
+model PostReport {
+  id         String       @id @default(cuid())
+  postId     String       @map("post_id")
+  reporterId String       @map("reporter_id")
+  reason     String
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  resolvedAt DateTime?    @map("resolved_at")
+  post       Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([postId, createdAt])
+  @@map("post_reports")
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String           @map("user_id")
+  type       NotificationType
+  title      String
+  body       String
+  targetType String?          @map("target_type")
+  targetId   String?          @map("target_id")
+  readAt     DateTime?        @map("read_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
 }

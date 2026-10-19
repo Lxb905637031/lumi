@@ -94,6 +94,16 @@ export class GenerationProcessor extends WorkerHost {
           },
         });
         await tx.generationOutput.create({ data: { jobId: job.data.jobId, assetId: asset.id } });
+        await tx.notification.create({
+          data: {
+            userId: job.data.userId,
+            type: 'GENERATION',
+            title: '试穿生成完成',
+            body: '你的试穿结果已经准备好，可以在生成记录中查看。',
+            targetType: 'GENERATION_JOB',
+            targetId: job.data.jobId,
+          },
+        });
       });
     } catch (error) {
       const errorCode = this.toErrorCode(error);
@@ -106,6 +116,18 @@ export class GenerationProcessor extends WorkerHost {
           nextAttemptAt: finalAttempt ? null : new Date(Date.now() + this.backoffFor(attempt)),
         },
       });
+      if (finalAttempt) {
+        await this.prisma.notification.create({
+          data: {
+            userId: job.data.userId,
+            type: 'GENERATION',
+            title: '试穿生成失败',
+            body: '本次生成失败，未产生公开内容，可以稍后重试。',
+            targetType: 'GENERATION_JOB',
+            targetId: job.data.jobId,
+          },
+        });
+      }
       this.logger.error(
         `Generation job ${job.data.jobId} failed on attempt ${attempt}`,
         error instanceof Error ? error.stack : undefined,

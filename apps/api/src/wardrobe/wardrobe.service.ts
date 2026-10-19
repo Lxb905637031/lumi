@@ -14,6 +14,7 @@ export class WardrobeService {
     const items = await this.prisma.clothingItem.findMany({
       where: {
         userId,
+        deletedAt: null,
         ...(cursor
           ? {
               OR: [
@@ -44,22 +45,63 @@ export class WardrobeService {
     };
   }
 
-  create(userId: string, input: { name: string; category: string; assetId?: string }) {
+  async create(
+    userId: string,
+    input: { name: string; category: string; assetId?: string; color?: string; style?: string },
+  ) {
+    await this.assertAssetOwned(userId, input.assetId);
     return this.prisma.clothingItem.create({
       data: {
         userId,
         name: input.name,
         category: input.category,
         assetId: input.assetId,
+        color: input.color,
+        style: input.style,
       },
     });
   }
 
   async findOwned(userId: string, id: string) {
     const item = await this.prisma.clothingItem.findFirst({
-      where: { id, userId },
+      where: { id, userId, deletedAt: null },
     });
     if (!item) throw new NotFoundException('衣物资料不存在');
     return item;
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    input: { name: string; category: string; assetId?: string; color?: string; style?: string },
+  ) {
+    await this.assertAssetOwned(userId, input.assetId);
+    const result = await this.prisma.clothingItem.updateMany({
+      where: { id, userId, deletedAt: null },
+      data: {
+        name: input.name,
+        category: input.category,
+        assetId: input.assetId,
+        color: input.color,
+        style: input.style,
+      },
+    });
+    if (result.count !== 1) throw new NotFoundException('衣物资料不存在');
+    return this.findOwned(userId, id);
+  }
+
+  async remove(userId: string, id: string) {
+    const result = await this.prisma.clothingItem.updateMany({
+      where: { id, userId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (result.count !== 1) throw new NotFoundException('衣物资料不存在');
+    return { success: true };
+  }
+
+  private async assertAssetOwned(userId: string, assetId?: string) {
+    if (!assetId) return;
+    const asset = await this.prisma.mediaAsset.findFirst({ where: { id: assetId, ownerId: userId, deletedAt: null } });
+    if (!asset) throw new NotFoundException('衣物图片不存在');
   }
 }

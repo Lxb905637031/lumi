@@ -46,6 +46,7 @@ test('generation processor moves a permanently failing job to dead letter', asyn
     generationOutput: {
       findFirst: async () => null,
     },
+    notification: { create: async () => ({}) },
   };
   const provider: GenerationProvider = {
     generate: async () => {

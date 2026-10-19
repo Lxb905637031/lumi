@@ -4,6 +4,12 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedRequest } from './authenticated-request';
 
+type AccessTokenPayload = {
+  sub: string;
+  openId: string;
+  sid: string;
+};
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -17,24 +23,40 @@ export class AuthGuard implements CanActivate {
     if (!header?.startsWith('Bearer ')) {
       throw new UnauthorizedException('登录状态已失效');
     }
-    const token = header.slice('Bearer '.length);
+    let payload: AccessTokenPayload;
     try {
-      const payload = await this.jwt.verifyAsync<{
-        sub: string;
-        openId: string;
-      }>(token);
-      if (!payload.sub || !payload.openId) throw new UnauthorizedException();
-      const user = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
-        select: { id: true, wxOpenId: true, role: true, status: true },
-      });
-      if (!user || user.status !== 'ACTIVE' || user.wxOpenId !== payload.openId) {
-        throw new UnauthorizedException();
-      }
-      request.user = { id: user.id, openId: user.wxOpenId, role: user.role };
+      payload = await this.jwt.verifyAsync<AccessTokenPayload>(header.slice('Bearer '.length));
     } catch {
       throw new UnauthorizedException('登录状态已失效');
     }
+    if (!payload.sub || !payload.openId || !payload.sid) throw new UnauthorizedException();
+    const session = await this.prisma.userSession.findUnique({
+      where: { id: payload.sid },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        revokedAt: true,
+        user: { select: { id: true, wxOpenId: true, role: true, status: true } },
+      },
+    });
+    if (
+      !session ||
+      session.userId !== payload.sub ||
+      session.revokedAt ||
+      session.expiresAt <= new Date() ||
+      session.user.status !== 'ACTIVE' ||
+      session.user.id !== payload.sub ||
+      session.user.wxOpenId !== payload.openId
+    ) {
+      throw new UnauthorizedException();
+    }
+    request.user = {
+      id: session.user.id,
+      openId: session.user.wxOpenId,
+      role: session.user.role,
+      sessionId: session.id,
+    };
     return true;
   }
 }

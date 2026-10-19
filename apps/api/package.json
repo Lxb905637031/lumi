@@ -8,10 +8,11 @@
     "start": "node dist/apps/api/src/main.js",
     "typecheck": "tsc -p tsconfig.test.json --noEmit",
     "test": "tsx --test tests/*.spec.ts",
-    "test:integration": "node tests/integration-smoke.mjs",
-    "db:generate": "prisma generate --schema prisma/schema.prisma",
-    "db:push": "prisma db push --schema prisma/schema.prisma",
-    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma"
+    "test:integration": "node --env-file-if-exists=../../.env tests/integration-smoke.mjs",
+    "db:generate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js generate --schema prisma/schema.prisma",
+    "db:push": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js db push --schema prisma/schema.prisma",
+    "db:migrate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js migrate dev --schema prisma/schema.prisma",
+    "db:seed": "node --env-file-if-exists=../../.env --import tsx prisma/seed.ts"
   },
   "dependencies": {
     "@lumi/contracts": "workspace:*",
@@ -21,6 +22,7 @@
     "@nestjs/core": "catalog:",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-fastify": "catalog:",
+    "@nestjs/throttler": "^6.7.1",
     "@prisma/client": "catalog:",
     "bullmq": "^6.3.16",
     "class-transformer": "catalog:",

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { CursorPage } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,6 +18,7 @@ export class BodyProfilesService {
     const profiles = await this.prisma.bodyProfile.findMany({
       where: {
         userId,
+        archivedAt: null,
         ...(cursor
           ? {
               OR: [
@@ -49,7 +50,20 @@ export class BodyProfilesService {
     };
   }
 
-  async create(userId: string, input: { name: string; heightCm?: number; weightKg?: number }) {
+  async create(
+    userId: string,
+    input: {
+      name: string;
+      heightCm?: number;
+      weightKg?: number;
+      shoulderCm?: number;
+      bustCm?: number;
+      waistCm?: number;
+      hipCm?: number;
+      sourceAssetId?: string;
+    },
+  ) {
+    await this.assertAssetOwned(userId, input.sourceAssetId);
     return this.prisma.$transaction(async (tx) => {
       const profile = await tx.bodyProfile.create({
         data: { userId, name: input.name },
@@ -61,7 +75,12 @@ export class BodyProfilesService {
           measurements: {
             heightCm: input.heightCm ?? null,
             weightKg: input.weightKg ?? null,
+            shoulderCm: input.shoulderCm ?? null,
+            bustCm: input.bustCm ?? null,
+            waistCm: input.waistCm ?? null,
+            hipCm: input.hipCm ?? null,
           },
+          sourceAssetId: input.sourceAssetId,
         },
         include: { profile: true },
       });
@@ -70,9 +89,68 @@ export class BodyProfilesService {
 
   async findOwned(userId: string, id: string) {
     const profile = await this.prisma.bodyProfile.findFirst({
-      where: { id, userId },
+      where: { id, userId, archivedAt: null },
+      include: { versions: { orderBy: { version: 'desc' }, take: 1 } },
     });
     if (!profile) throw new NotFoundException('身材档案不存在');
     return profile;
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    input: Parameters<BodyProfilesService['create']>[1] & { expectedVersion: number },
+  ) {
+    await this.assertAssetOwned(userId, input.sourceAssetId);
+    const profile = await this.prisma.bodyProfile.findFirst({ where: { id, userId, archivedAt: null } });
+    if (!profile) throw new NotFoundException('身材档案不存在');
+    if (profile.activeVersion !== input.expectedVersion)
+      throw new ConflictException('档案已有新版本，请刷新后确认参数');
+    return this.prisma.$transaction(async (tx) => {
+      const version = profile.activeVersion + 1;
+      const updated = await tx.bodyProfile.updateMany({
+        where: { id, userId, archivedAt: null, activeVersion: input.expectedVersion },
+        data: { name: input.name, activeVersion: version },
+      });
+      if (updated.count !== 1) throw new ConflictException('档案状态已变化，请刷新');
+      return tx.bodyProfileVersion.create({
+        data: {
+          profileId: id,
+          version,
+          measurements: {
+            heightCm: input.heightCm ?? null,
+            weightKg: input.weightKg ?? null,
+            shoulderCm: input.shoulderCm ?? null,
+            bustCm: input.bustCm ?? null,
+            waistCm: input.waistCm ?? null,
+            hipCm: input.hipCm ?? null,
+          },
+          sourceAssetId:
+            input.sourceAssetId ??
+            (
+              await tx.bodyProfileVersion.findUnique({
+                where: { profileId_version: { profileId: id, version: profile.activeVersion } },
+                select: { sourceAssetId: true },
+              })
+            )?.sourceAssetId,
+        },
+        include: { profile: true },
+      });
+    });
+  }
+
+  async archive(userId: string, id: string) {
+    const updated = await this.prisma.bodyProfile.updateMany({
+      where: { id, userId, archivedAt: null },
+      data: { archivedAt: new Date() },
+    });
+    if (updated.count !== 1) throw new NotFoundException('身材档案不存在');
+    return { success: true };
+  }
+
+  private async assertAssetOwned(userId: string, assetId?: string) {
+    if (!assetId) return;
+    const asset = await this.prisma.mediaAsset.findFirst({ where: { id: assetId, ownerId: userId, deletedAt: null } });
+    if (!asset) throw new NotFoundException('人物图片不存在');
   }
 }

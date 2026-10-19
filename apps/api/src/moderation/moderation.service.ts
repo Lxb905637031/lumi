@@ -70,6 +70,25 @@ export class ModerationService {
           reason: input.reason,
         },
       });
+      const imageAssetIds = Array.isArray(current.imageAssetIds)
+        ? current.imageAssetIds.filter((id): id is string => typeof id === 'string')
+        : [];
+      if (imageAssetIds.length) {
+        await tx.mediaAsset.updateMany({
+          where: { id: { in: imageAssetIds }, ownerId: current.authorId, deletedAt: null },
+          data: { visibility: input.status === 'APPROVED' ? 'PUBLIC' : 'PRIVATE' },
+        });
+      }
+      await tx.notification.create({
+        data: {
+          userId: post.author.id,
+          type: 'MODERATION',
+          title: input.status === 'APPROVED' ? '帖子已通过审核' : '帖子审核状态已更新',
+          body: input.reason ?? `你的帖子状态已更新为 ${input.status}`,
+          targetType: 'POST',
+          targetId: post.id,
+        },
+      });
       return post;
     });
     return this.toQueueItem(updated);

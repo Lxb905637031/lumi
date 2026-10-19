@@ -25,6 +25,8 @@ export type CursorPage<T> = {
 
 export type AuthSession = {
   accessToken: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
   user: { id: string; openId: string; role: UserRole };
   freeMode: boolean;
 };
@@ -48,8 +50,16 @@ export type ModerationQueueItem = {
 export type BodyProfileVersion = {
   id: string;
   profileId: string;
+  sourceAssetId: string | null;
   version: number;
-  measurements: { heightCm: number | null; weightKg: number | null };
+  measurements: {
+    heightCm: number | null;
+    weightKg: number | null;
+    shoulderCm?: number | null;
+    bustCm?: number | null;
+    waistCm?: number | null;
+    hipCm?: number | null;
+  };
   createdAt: string;
 };
 
@@ -67,6 +77,11 @@ export type CreateBodyProfileInput = {
   name: string;
   heightCm?: number;
   weightKg?: number;
+  shoulderCm?: number;
+  bustCm?: number;
+  waistCm?: number;
+  hipCm?: number;
+  sourceAssetId?: string;
 };
 
 export type CreateBodyProfileResponse = BodyProfileVersion & {
@@ -78,6 +93,8 @@ export type ClothingItem = {
   userId: string;
   name: string;
   category: 'TOP' | 'BOTTOM' | 'DRESS';
+  color?: string | null;
+  style?: string | null;
   assetId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +104,75 @@ export type CreateClothingInput = {
   name: string;
   category: ClothingItem['category'];
   assetId?: string;
+  color?: string;
+  style?: string;
+};
+
+export type MediaAsset = {
+  id: string;
+  objectKey: string;
+  mimeType: string;
+  byteSize: number;
+  visibility: string;
+  previewData: string | null;
+  createdAt: string;
+};
+
+export type CreateMediaAssetInput = {
+  fileName: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  base64: string;
+};
+
+export type CommunityPost = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  body: string;
+  topic: string | null;
+  imageAssetIds: string[];
+  imagePreviews: string[];
+  isAiGenerated: boolean;
+  moderationStatus: ModerationStatus;
+  featuredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  likeCount: number;
+  commentCount: number;
+  bookmarkCount: number;
+  liked: boolean;
+  bookmarked: boolean;
+};
+
+export type CreateCommunityPostInput = {
+  title: string;
+  body: string;
+  imageAssetIds?: string[];
+  topic?: string;
+  isAiGenerated?: boolean;
+};
+
+export type CommunityComment = {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+};
+
+export type CreateCommentInput = { body: string };
+
+export type Notification = {
+  id: string;
+  type: 'SYSTEM' | 'MODERATION' | 'GENERATION';
+  title: string;
+  body: string;
+  targetType: string | null;
+  targetId: string | null;
+  readAt: string | null;
+  createdAt: string;
 };
 
 export type GenerationJob = {

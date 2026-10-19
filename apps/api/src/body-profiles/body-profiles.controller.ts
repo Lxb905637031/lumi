@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../common/auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthenticatedUser } from '../common/authenticated-request';
 import { CursorPaginationDto } from '../common/pagination/pagination.dto';
-import { CreateBodyProfileDto } from './body-profile.dto';
+import { CreateBodyProfileDto, UpdateBodyProfileDto } from './body-profile.dto';
 import { BodyProfilesService } from './body-profiles.service';
 
 @Controller('body-profiles')
@@ -24,5 +24,15 @@ export class BodyProfilesController {
   @Get(':id')
   findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.profiles.findOwned(user.id, id);
+  }
+
+  @Patch(':id')
+  update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: UpdateBodyProfileDto) {
+    return this.profiles.update(user.id, id, dto);
+  }
+
+  @Delete(':id')
+  archive(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.profiles.archive(user.id, id);
   }
 }
