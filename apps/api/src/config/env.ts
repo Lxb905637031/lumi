@@ -37,6 +37,10 @@ class Environment {
   @IsOptional()
   @IsString()
   WECHAT_APP_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  LOCAL_ADMIN_OPEN_IDS = '';
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {
@@ -55,6 +59,9 @@ export function validateEnvironment(config: Record<string, unknown>) {
   }
   if (environment.NODE_ENV === 'production' && !environment.CORS_ORIGINS.trim()) {
     throw new Error('CORS_ORIGINS must be configured in production');
+  }
+  if (environment.NODE_ENV === 'production' && environment.LOCAL_ADMIN_OPEN_IDS.trim()) {
+    throw new Error('LOCAL_ADMIN_OPEN_IDS is only allowed outside production');
   }
   return environment;
 }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { PrismaClient } from '@prisma/client';
 
 const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4300/api/v1';
 const request = async (path, init = {}) => {
@@ -96,6 +97,49 @@ const clothingPage = await request('/wardrobe/items?limit=5', {
 assert.equal(clothingPage.response.status, 200);
 assert.equal(clothingPage.body.items.length, 1);
 
+const prisma = new PrismaClient();
+const moderationPost = await prisma.post.create({
+  data: {
+    authorId: login.body.user.id,
+    title: `Smoke moderation ${Date.now()}`,
+    body: 'A moderation queue integration fixture created by the smoke test.',
+  },
+});
+await prisma.$disconnect();
+
+const forbiddenModeration = await request('/admin/moderation/posts', {
+  headers: authorization,
+});
+assert.equal(forbiddenModeration.response.status, 403);
+
+const adminLogin = await request('/auth/wechat/login', {
+  method: 'POST',
+  body: JSON.stringify({ code: 'local:admin-smoke' }),
+});
+assert.equal(adminLogin.response.status, 201);
+assert.equal(adminLogin.body.user.role, 'ADMIN');
+const adminAuthorization = { authorization: `Bearer ${adminLogin.body.accessToken}` };
+const moderationPage = await request('/admin/moderation/posts?limit=5', {
+  headers: adminAuthorization,
+});
+assert.equal(moderationPage.response.status, 200);
+assert.ok(moderationPage.body.items.some((item) => item.id === moderationPost.id));
+
+const moderationUpdate = await request(`/admin/moderation/posts/${moderationPost.id}/status`, {
+  method: 'PATCH',
+  headers: adminAuthorization,
+  body: JSON.stringify({ status: 'APPROVED', reason: 'Smoke test approval' }),
+});
+assert.equal(moderationUpdate.response.status, 200);
+assert.equal(moderationUpdate.body.status, 'APPROVED');
+const repeatedModerationUpdate = await request(`/admin/moderation/posts/${moderationPost.id}/status`, {
+  method: 'PATCH',
+  headers: adminAuthorization,
+  body: JSON.stringify({ status: 'APPROVED' }),
+});
+assert.equal(repeatedModerationUpdate.response.status, 200);
+assert.equal(repeatedModerationUpdate.body.status, 'APPROVED');
+
 const jobInput = {
   profileVersionId,
   clothingAssetId: clothing.body.id,
@@ -140,5 +184,6 @@ console.log(
     clothing: 'ok',
     generation: job.status,
     idempotency: 'ok',
+    moderation: 'ok',
   }),
 );

@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { BodyProfilesModule } from './body-profiles/body-profiles.module';
 import { GenerationsModule } from './generations/generations.module';
 import { WardrobeModule } from './wardrobe/wardrobe.module';
+import { ModerationModule } from './moderation/moderation.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { WardrobeModule } from './wardrobe/wardrobe.module';
     BodyProfilesModule,
     GenerationsModule,
     WardrobeModule,
+    ModerationModule,
   ],
 })
 export class AppModule {}

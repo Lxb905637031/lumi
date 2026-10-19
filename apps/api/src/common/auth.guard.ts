@@ -1,11 +1,15 @@
 import type { CanActivate, ExecutionContext } from '@nestjs/common';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedRequest } from './authenticated-request';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -20,7 +24,14 @@ export class AuthGuard implements CanActivate {
         openId: string;
       }>(token);
       if (!payload.sub || !payload.openId) throw new UnauthorizedException();
-      request.user = { id: payload.sub, openId: payload.openId };
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { id: true, wxOpenId: true, role: true, status: true },
+      });
+      if (!user || user.status !== 'ACTIVE' || user.wxOpenId !== payload.openId) {
+        throw new UnauthorizedException();
+      }
+      request.user = { id: user.id, openId: user.wxOpenId, role: user.role };
     } catch {
       throw new UnauthorizedException('登录状态已失效');
     }

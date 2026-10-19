@@ -25,8 +25,24 @@ export type CursorPage<T> = {
 
 export type AuthSession = {
   accessToken: string;
-  user: { id: string; openId: string };
+  user: { id: string; openId: string; role: UserRole };
   freeMode: boolean;
+};
+
+export const userRoles = ['USER', 'MODERATOR', 'ADMIN'] as const;
+export type UserRole = (typeof userRoles)[number];
+
+export const moderationStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'REMOVED'] as const;
+export type ModerationStatus = (typeof moderationStatuses)[number];
+
+export type ModerationQueueItem = {
+  id: string;
+  title: string;
+  bodyPreview: string;
+  submittedBy: string;
+  status: ModerationStatus;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type BodyProfileVersion = {

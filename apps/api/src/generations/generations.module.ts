@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthGuard } from '../common/auth.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { GenerationsController } from './generations.controller';
 import { GENERATION_QUEUE } from './generation-queue.port';
@@ -10,6 +11,7 @@ import { GenerationsService } from './generations.service';
   controllers: [GenerationsController],
   providers: [
     GenerationsService,
+    AuthGuard,
     MockGenerationQueueAdapter,
     { provide: GENERATION_QUEUE, useExisting: MockGenerationQueueAdapter },
   ],

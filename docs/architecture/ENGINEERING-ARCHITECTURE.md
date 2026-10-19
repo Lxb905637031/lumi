@@ -31,6 +31,7 @@ apps/api/src/
   body-profiles/          # Controller / DTO / Service / Module
   wardrobe/               # Controller / DTO / Service / Module
   generations/            # 用例编排与生成队列端口/adapter
+  moderation/             # 管理审核队列、状态变更和审计记录
 
 apps/miniapp/src/
   app.tsx                 # 小程序应用入口
@@ -70,6 +71,7 @@ packages/contracts/src/    # 纯 TypeScript 公共契约
 - 后台用 Tailwind 主题 token 表达语义颜色和排版；复杂可复用交互才抽成组件，不把整页塞进一个 JSX，也不为每一条 class 建造包装器。
 - Taro 页面只使用 Taro 原语与 API，不调用浏览器 DOM、`window` 或 `document`。
 - API 输入必须经过 DTO + 全局 ValidationPipe；错误转换成统一 HTTP 错误语义，禁止吞掉异常后返回伪成功。
+- 管理后台路由必须同时经过身份认证与 RBAC；审核状态变更使用条件更新避免并发覆盖，并记录操作审计。
 - 异步提交必须可重试且幂等；队列生产实现需要持久化、失败重试、死信/人工恢复和状态观测。
 - 组件和函数聚焦单一职责；只有存在真实复用或边界价值时才抽象，不为目录整齐创建无行为的包装层。
 - 每个业务 feature 至少覆盖正常、空、加载、失败和重复提交测试；跨应用协议变化必须跑 API、miniapp、admin 的 typecheck/build。
@@ -78,7 +80,7 @@ packages/contracts/src/    # 纯 TypeScript 公共契约
 ## 当前边界与上线门槛
 
 - miniapp 的首页目前是联调垂直切片，视觉原型和静态 Feed 数据不能代表所有 JD 功能已经上线。
-- admin 当前使用本地审核队列 fixture；在审核 API、权限和审计记录接通前，不能作为真实运营控制台使用。
+- admin 已接入审核 API、权限和审计记录的开发垂直切片；未配置管理员 token 时仍显示本地预览，不能作为真实运营控制台使用。
 - `FREE_MODE=true` 只允许本地联调和 mock adapter。公开部署必须关闭并接入真实微信登录、媒体对象存储、审核、生成 provider、持久化队列、速率限制、备份与监控。
 - 生产发布需要数据库迁移审查、API 集成测试、真机小程序验收和后台权限验收。免费开发环境不等于免费生产容量，也不代表已经达到生产可用标准。
 - 发布候选验收以 [DEFINITION-OF-DONE.md](DEFINITION-OF-DONE.md) 为准；开发 fixture/mock 不得在用户界面或文档中伪装为生产数据与能力。

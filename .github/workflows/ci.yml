@@ -27,6 +27,7 @@ jobs:
       JWT_ACCESS_SECRET: ci-only-secret-that-is-at-least-thirty-two-characters
       CORS_ORIGINS: http://localhost:5173
       FREE_MODE: 'true'
+      LOCAL_ADMIN_OPEN_IDS: admin-smoke
       PORT: 4300
     steps:
       - uses: actions/checkout@v4

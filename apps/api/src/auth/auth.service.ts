@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -14,18 +15,28 @@ export class AuthService {
   async login(code: string) {
     const freeMode = this.config.getOrThrow<string>('FREE_MODE') === 'true';
     const openId = freeMode ? this.getLocalOpenId(code) : await this.exchangeWechatCode(code);
+    const isLocalAdmin = freeMode && this.isConfiguredLocalAdmin(openId);
     const user = await this.prisma.user.upsert({
       where: { wxOpenId: openId },
       create: { wxOpenId: openId },
-      update: { status: 'ACTIVE' },
-      select: { id: true, wxOpenId: true },
+      update: { status: 'ACTIVE', ...(isLocalAdmin ? { role: UserRole.ADMIN } : {}) },
+      select: { id: true, wxOpenId: true, role: true },
     });
     const accessToken = await this.jwt.signAsync({ openId: user.wxOpenId }, { subject: user.id });
     return {
       accessToken,
-      user: { id: user.id, openId: user.wxOpenId },
+      user: { id: user.id, openId: user.wxOpenId, role: user.role },
       freeMode,
     };
+  }
+
+  private isConfiguredLocalAdmin(openId: string): boolean {
+    return this.config
+      .getOrThrow<string>('LOCAL_ADMIN_OPEN_IDS')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .includes(openId);
   }
 
   private getLocalOpenId(code: string) {

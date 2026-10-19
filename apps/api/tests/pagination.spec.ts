@@ -52,3 +52,20 @@ test('production configuration requires an explicit CORS allowlist', () => {
     /CORS_ORIGINS must be configured in production/,
   );
 });
+
+test('production configuration rejects local admin identifiers', () => {
+  assert.throws(
+    () =>
+      validateEnvironment({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://lumi:secret@localhost:5432/lumi',
+        JWT_ACCESS_SECRET: 'a-production-secret-longer-than-thirty-two-characters',
+        FREE_MODE: 'false',
+        WECHAT_APP_ID: 'wx-app-id',
+        WECHAT_APP_SECRET: 'wx-app-secret',
+        CORS_ORIGINS: 'https://lumi.example.com',
+        LOCAL_ADMIN_OPEN_IDS: 'admin-local',
+      }),
+    /LOCAL_ADMIN_OPEN_IDS is only allowed outside production/,
+  );
+});

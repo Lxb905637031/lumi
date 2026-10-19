@@ -19,7 +19,7 @@ export function AdminShell({ title, children }: AdminShellProps) {
         className="mt-8 border-l-2 border-lumi-brand bg-lumi-surface px-4 py-3 text-sm text-lumi-muted"
         role="status"
       >
-        当前展示本地 fixture 数据，未连接真实审核与运营接口。
+        审核队列支持服务端 API；未配置管理员会话时仅展示本地开发预览。
       </div>
       {children}
     </main>

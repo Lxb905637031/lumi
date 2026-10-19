@@ -13,6 +13,12 @@ enum UserStatus {
   DELETED
 }
 
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
 enum GenerationJobStatus {
   QUEUED
   RUNNING
@@ -32,6 +38,7 @@ model User {
   id          String     @id @default(cuid())
   wxOpenId    String     @unique @map("wx_open_id")
   status      UserStatus @default(ACTIVE)
+  role        UserRole   @default(USER)
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
   profiles    BodyProfile[]
@@ -41,6 +48,7 @@ model User {
   comments    Comment[]
   sessions    UserSession[]
   clothingItems ClothingItem[]
+  moderationActions ModerationAction[] @relation("ModerationActor")
 
   @@map("users")
 }
@@ -160,9 +168,26 @@ model Post {
   updatedAt        DateTime         @updatedAt @map("updated_at")
   author           User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments         Comment[]
+  moderationActions ModerationAction[]
 
   @@index([moderationStatus, createdAt])
   @@map("posts")
+}
+
+model ModerationAction {
+  id         String           @id @default(cuid())
+  postId     String           @map("post_id")
+  actorId    String           @map("actor_id")
+  fromStatus ModerationStatus @map("from_status")
+  toStatus   ModerationStatus @map("to_status")
+  reason     String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  post       Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  actor      User             @relation("ModerationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("moderation_actions")
 }
 
 model Comment {
