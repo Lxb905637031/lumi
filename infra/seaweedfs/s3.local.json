@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "lumi-local-development-only",
+      "credentials": [{ "accessKey": "lumi", "secretKey": "lumi-local-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

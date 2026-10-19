@@ -10,6 +10,8 @@
     "test": "tsx --test tests/*.spec.ts",
     "test:integration": "node --env-file-if-exists=../../.env tests/integration-smoke.mjs",
     "test:migrations": "node --env-file-if-exists=../../.env tests/migrations.mjs",
+    "test:storage": "node --env-file-if-exists=../../.env tests/storage-integration.mjs",
+    "storage:init-local": "node --env-file-if-exists=../../.env scripts/init-local-storage.mjs",
     "db:generate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js generate --schema prisma/schema.prisma",
     "db:push": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js db push --schema prisma/schema.prisma",
     "db:migrate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js migrate dev --schema prisma/schema.prisma",

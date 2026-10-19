@@ -4,6 +4,11 @@ import type { ApiError } from '@lumi/contracts';
 const API_BASE_URL = process.env.TARO_APP_API_BASE_URL ?? 'http://127.0.0.1:4300/api/v1';
 const ACCESS_TOKEN_KEY = 'lumi.accessToken';
 const REFRESH_TOKEN_KEY = 'lumi.refreshToken';
+let sessionEpoch = 0;
+
+export function getSessionEpoch(): number {
+  return sessionEpoch;
+}
 
 function getAccessToken(): string {
   return Taro.getStorageSync<string>(ACCESS_TOKEN_KEY) || '';
@@ -18,6 +23,7 @@ export function saveRefreshToken(refreshToken: string): void {
 }
 
 export function clearSession(): void {
+  sessionEpoch += 1;
   Taro.removeStorageSync(ACCESS_TOKEN_KEY);
   Taro.removeStorageSync(REFRESH_TOKEN_KEY);
 }

@@ -22,19 +22,25 @@ services:
     volumes:
       - lumi-redis:/data
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: lumi
-      MINIO_ROOT_PASSWORD: lumi-local-secret
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    command: >-
+      server -dir=/data -ip=seaweedfs -ip.bind=0.0.0.0
+      -master.telemetry=false -master.volumeSizeLimitMB=512 -volume.max=20
+      -filer -filer.concurrentUploadLimitMB=32
+      -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+      -s3.iam=false -s3.port.iceberg=0 -s3.port.lance=0
+      -s3.autoCreateBucket=false -s3.allowDeleteBucketNotEmpty=false
+      -s3.concurrentUploadLimitMB=32 -s3.concurrentFileUploadLimit=4
+      -s3.allowedOrigins=http://localhost:5173,http://127.0.0.1:5173
     ports:
-      - "59000:9000"
-      - "59001:9001"
+      - "127.0.0.1:59000:8333"
     volumes:
-      - lumi-minio:/data
+      - lumi-seaweedfs:/data
+      - ./infra/seaweedfs/s3.local.json:/etc/seaweedfs/s3.json:ro
 
 volumes:
   lumi-postgres:
   lumi-redis:
   lumi-minio:
+  lumi-seaweedfs:

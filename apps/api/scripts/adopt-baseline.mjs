@@ -43,8 +43,8 @@ export async function adoptBaseline(databaseUrl, { allowRemote = false } = {}) {
       [
         'migrate',
         'diff',
-        '--from-url',
-        databaseUrl,
+        '--from-schema-datasource',
+        'prisma/schema.prisma',
         '--to-schema-datamodel',
         'prisma/baseline/schema.prisma',
         '--exit-code',

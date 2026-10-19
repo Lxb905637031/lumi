@@ -9,6 +9,11 @@ export class SystemController {
   getBootstrap() {
     return {
       freeMode: this.config.getOrThrow<string>('FREE_MODE') === 'true',
+      media: {
+        uploadMode:
+          this.config.getOrThrow<string>('MEDIA_STORAGE_DRIVER') === 's3' ? 'signed-post' : 'development-base64',
+        maxBytes: 5 * 1024 * 1024,
+      },
       features: {
         generation: true,
         payments: false,

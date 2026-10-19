@@ -37,6 +37,12 @@ jobs:
       JWT_ACCESS_SECRET: ci-only-secret-that-is-at-least-thirty-two-characters
       CORS_ORIGINS: http://localhost:5173
       FREE_MODE: 'true'
+      MEDIA_STORAGE_DRIVER: s3
+      S3_ENDPOINT: http://127.0.0.1:59000
+      S3_REGION: us-east-1
+      S3_BUCKET: lumi-media
+      S3_ACCESS_KEY: lumi
+      S3_SECRET_KEY: lumi-local-secret
       LOCAL_ADMIN_OPEN_IDS: admin-smoke
       PORT: 4300
     steps:
@@ -53,6 +59,10 @@ jobs:
       - run: pnpm check
       - name: Empty database and legacy upgrade regression
         run: pnpm test:migrations
+      - name: Start private development object storage
+        run: |
+          docker compose up -d seaweedfs
+          pnpm --filter @lumi/api storage:init-local
       - name: Database schema and API integration
         run: |
           pnpm db:deploy
@@ -67,3 +77,4 @@ jobs:
           done
           curl --fail --silent http://127.0.0.1:4300/api/v1/health >/dev/null || { cat /tmp/lumi-api.log; exit 1; }
           pnpm --filter @lumi/api test:integration
+          LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:storage

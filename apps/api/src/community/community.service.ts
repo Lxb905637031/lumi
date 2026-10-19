@@ -4,6 +4,7 @@ import type { CommunityComment, CommunityPost, CursorPage } from '@lumi/contract
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import type { CursorPaginationDto } from '../common/pagination/pagination.dto';
+import { MediaService } from '../media/media.service';
 
 type PostWithCounts = Prisma.PostGetPayload<{
   include: {
@@ -14,7 +15,10 @@ type PostWithCounts = Prisma.PostGetPayload<{
 
 @Injectable()
 export class CommunityService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly media: MediaService,
+  ) {}
 
   async interactionState(userId: string, postId: string) {
     await this.assertApproved(postId);
@@ -87,7 +91,7 @@ export class CommunityService {
     const hasNext = posts.length > pagination.limit;
     const items = hasNext ? posts.slice(0, pagination.limit) : posts;
     const last = items.at(-1);
-    const imagePreviews = await this.findImagePreviews(items);
+    const imagePreviews = await this.media.previewsForPosts(items, ownerId);
     return {
       items: items.map((post) => this.toPost(post, imagePreviews.get(post.id) ?? [])),
       nextCursor:
@@ -104,7 +108,7 @@ export class CommunityService {
       },
     });
     if (!post) throw new NotFoundException('帖子不存在');
-    const imagePreviews = await this.findImagePreviews([post]);
+    const imagePreviews = await this.media.previewsForPosts([post]);
     return {
       ...this.toPost(post, imagePreviews.get(post.id) ?? []),
     };
@@ -117,7 +121,7 @@ export class CommunityService {
     const imageAssetIds = input.imageAssetIds ?? [];
     if (imageAssetIds.length) {
       const count = await this.prisma.mediaAsset.count({
-        where: { id: { in: imageAssetIds }, ownerId: userId, deletedAt: null },
+        where: { id: { in: imageAssetIds }, ownerId: userId, status: 'READY', deletedAt: null },
       });
       if (count !== imageAssetIds.length) throw new NotFoundException('帖子图片不存在');
     }
@@ -196,25 +200,6 @@ export class CommunityService {
       select: { id: true },
     });
     if (!post) throw new NotFoundException('帖子不存在');
-  }
-
-  private async findImagePreviews(posts: PostWithCounts[]) {
-    const idsByPost = new Map(posts.map((post) => [post.id, this.readImageIds(post.imageAssetIds)]));
-    const allIds = [...new Set([...idsByPost.values()].flat())];
-    if (!allIds.length) return new Map<string, string[]>();
-    const assets = await this.prisma.mediaAsset.findMany({
-      where: { id: { in: allIds }, visibility: 'PUBLIC', deletedAt: null },
-      select: { id: true, previewData: true },
-    });
-    const previewById = new Map(
-      assets.filter((asset) => asset.previewData).map((asset) => [asset.id, asset.previewData!]),
-    );
-    return new Map(
-      [...idsByPost].map(([postId, assetIds]) => [
-        postId,
-        assetIds.flatMap((id) => (previewById.has(id) ? [previewById.get(id)!] : [])),
-      ]),
-    );
   }
 
   private readImageIds(imageAssetIds: Prisma.JsonValue): string[] {

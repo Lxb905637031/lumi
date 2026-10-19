@@ -2,6 +2,7 @@ import { plainToInstance, Type } from 'class-transformer';
 import {
   IsBooleanString,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Matches,
@@ -77,6 +78,28 @@ class Environment {
   @Min(100)
   @Max(60_000)
   GENERATION_QUEUE_BACKOFF_MS = 1_000;
+
+  @IsIn(['local', 's3'])
+  MEDIA_STORAGE_DRIVER = 'local';
+
+  @IsOptional()
+  @IsString()
+  S3_ENDPOINT?: string;
+
+  @IsString()
+  S3_REGION = 'us-east-1';
+
+  @IsOptional()
+  @Matches(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/)
+  S3_BUCKET?: string;
+
+  @IsOptional()
+  @IsString()
+  S3_ACCESS_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  S3_SECRET_KEY?: string;
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {
@@ -85,7 +108,7 @@ export function validateEnvironment(config: Record<string, unknown>) {
   });
   const errors = validateSync(environment, { skipMissingProperties: false });
   if (errors.length > 0) {
-    throw new Error(`Invalid environment configuration: ${errors.toString()}`);
+    throw new Error(`Invalid environment fields: ${errors.map((error) => error.property).join(', ')}`);
   }
   if (environment.FREE_MODE !== 'true' && (!environment.WECHAT_APP_ID || !environment.WECHAT_APP_SECRET)) {
     throw new Error('WECHAT_APP_ID and WECHAT_APP_SECRET are required when FREE_MODE is disabled');
@@ -98,6 +121,37 @@ export function validateEnvironment(config: Record<string, unknown>) {
   }
   if (environment.NODE_ENV === 'production' && environment.LOCAL_ADMIN_OPEN_IDS.trim()) {
     throw new Error('LOCAL_ADMIN_OPEN_IDS is only allowed outside production');
+  }
+  if (environment.NODE_ENV === 'production' && environment.MEDIA_STORAGE_DRIVER !== 's3') {
+    throw new Error('Private S3 media storage is required in production');
+  }
+  if (environment.MEDIA_STORAGE_DRIVER === 's3') {
+    if (
+      !environment.S3_ENDPOINT ||
+      !environment.S3_BUCKET ||
+      !environment.S3_ACCESS_KEY ||
+      !environment.S3_SECRET_KEY
+    ) {
+      throw new Error('S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY and S3_SECRET_KEY are required for s3');
+    }
+    let endpoint: URL;
+    try {
+      endpoint = new URL(environment.S3_ENDPOINT);
+    } catch {
+      throw new Error('S3_ENDPOINT must be a valid URL');
+    }
+    if (
+      !['http:', 'https:'].includes(endpoint.protocol) ||
+      endpoint.username ||
+      endpoint.password ||
+      endpoint.search ||
+      endpoint.hash ||
+      endpoint.pathname !== '/'
+    ) {
+      throw new Error('S3_ENDPOINT must be an HTTP(S) origin without credentials, path or query');
+    }
+    if (environment.NODE_ENV === 'production' && endpoint.protocol !== 'https:')
+      throw new Error('S3_ENDPOINT must use HTTPS in production');
   }
   return environment;
 }

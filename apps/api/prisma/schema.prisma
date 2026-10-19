@@ -47,6 +47,15 @@ enum ReportStatus {
   REJECTED
 }
 
+enum MediaStatus {
+  PENDING
+  PROCESSING
+  READY
+  REJECTED
+  EXPIRED
+  DELETED
+}
+
 model User {
   id                       String                    @id @default(cuid())
   wxOpenId                 String                    @unique @map("wx_open_id")
@@ -131,21 +140,46 @@ model BodyProfileVersion {
 }
 
 model MediaAsset {
-  id                String             @id @default(cuid())
-  ownerId           String             @map("owner_id")
-  objectKey         String             @unique @map("object_key")
-  mimeType          String             @map("mime_type")
-  byteSize          Int                @map("byte_size")
-  sha256            String
-  visibility        String             @default("PRIVATE")
-  previewData       String?            @map("preview_data") @db.Text
-  deletedAt         DateTime?          @map("deleted_at")
-  createdAt         DateTime           @default(now()) @map("created_at")
-  owner             User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  generationOutputs GenerationOutput[]
+  id                  String             @id @default(cuid())
+  ownerId             String             @map("owner_id")
+  objectKey           String             @unique @map("object_key")
+  storageDriver       String             @default("local") @map("storage_driver")
+  status              MediaStatus        @default(READY)
+  stagingObjectKey    String?            @unique @map("staging_object_key")
+  uploadRequestKey    String?            @map("upload_request_key")
+  uploadMimeType      String?            @map("upload_mime_type")
+  uploadByteSize      Int?               @map("upload_byte_size")
+  uploadExpiresAt     DateTime?          @map("upload_expires_at")
+  processingToken     String?            @map("processing_token")
+  processingStartedAt DateTime?          @map("processing_started_at")
+  width               Int?
+  height              Int?
+  mimeType            String             @map("mime_type")
+  byteSize            Int                @map("byte_size")
+  sha256              String
+  visibility          String             @default("PRIVATE")
+  previewData         String?            @map("preview_data") @db.Text
+  deletedAt           DateTime?          @map("deleted_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  owner               User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  generationOutputs   GenerationOutput[]
 
+  @@unique([ownerId, uploadRequestKey])
   @@index([ownerId, createdAt])
+  @@index([status, uploadExpiresAt])
   @@map("media_assets")
+}
+
+model ObjectCleanup {
+  id            String   @id @default(cuid())
+  objectKey     String   @unique @map("object_key")
+  notBefore     DateTime @map("not_before")
+  attempts      Int      @default(0)
+  lastErrorCode String?  @map("last_error_code")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([notBefore])
+  @@map("object_cleanup")
 }
 
 model ClothingItem {

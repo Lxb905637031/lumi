@@ -110,12 +110,37 @@ export type CreateClothingInput = {
 
 export type MediaAsset = {
   id: string;
-  objectKey: string;
+  status: 'PENDING' | 'PROCESSING' | 'READY' | 'REJECTED' | 'EXPIRED' | 'DELETED';
+  storageDriver: string;
   mimeType: string;
   byteSize: number;
   visibility: string;
   previewData: string | null;
+  url: string | null;
+  urlExpiresAt: string | null;
+  width: number | null;
+  height: number | null;
   createdAt: string;
+};
+
+export type SystemBootstrap = {
+  freeMode: boolean;
+  media: { uploadMode: 'signed-post' | 'development-base64'; maxBytes: number };
+  features: { generation: boolean; payments: boolean; community: boolean; follows: boolean };
+};
+
+export type ReserveMediaUploadInput = {
+  fileName: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  byteSize: number;
+  idempotencyKey: string;
+};
+
+export type MediaUploadReservation = {
+  assetId: string;
+  status: MediaAsset['status'];
+  expiresAt: string | null;
+  upload: { url: string; fields: Record<string, string> } | null;
 };
 
 export type CreateMediaAssetInput = {

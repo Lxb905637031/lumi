@@ -55,6 +55,17 @@ try {
     'migration-sentinel:' + id,
   );
   const profileId = randomUUID();
+  const assetId = randomUUID();
+  await legacy.client.$executeRawUnsafe(
+    `INSERT INTO "${legacy.schema}"."media_assets" (id, owner_id, object_key, mime_type, byte_size, sha256, preview_data) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    assetId,
+    id,
+    'local/legacy-sentinel',
+    'image/png',
+    1,
+    'legacy-hash',
+    'legacy-preview',
+  );
   await legacy.client.$executeRawUnsafe(
     `INSERT INTO "${legacy.schema}"."body_profiles" (id, user_id, name, updated_at) VALUES ($1, $2, $3, NOW())`,
     profileId,
@@ -76,6 +87,10 @@ try {
   const profile = await legacy.client.bodyProfile.findUniqueOrThrow({ where: { id: profileId } });
   assert.equal(profile.name, 'preserved profile');
   assert.equal(profile.userId, id);
+  const asset = await legacy.client.mediaAsset.findUniqueOrThrow({ where: { id: assetId } });
+  assert.equal(asset.status, 'READY');
+  assert.equal(asset.storageDriver, 'local');
+  assert.equal(asset.previewData, 'legacy-preview');
   const migrations = await legacy.client.$queryRawUnsafe(
     `SELECT migration_name FROM "${legacy.schema}"."_prisma_migrations" WHERE finished_at IS NOT NULL`,
   );

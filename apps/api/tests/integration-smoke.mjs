@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomBytes, randomUUID, scrypt } from 'node:crypto';
 import { promisify } from 'node:util';
 import { PrismaClient } from '@prisma/client';
+import sharp from 'sharp';
 
 const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4300/api/v1';
 assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(new URL(baseUrl).hostname), 'Smoke tests are local-only');
@@ -35,6 +36,29 @@ async function login(label) {
   const session = await request('/auth/wechat/login', 201, write('POST', {}, { code: 'local:' + runId + '-' + label }));
   fixtureUsers.add(session.user.id);
   return session;
+}
+
+async function createImage(input, uploadMode, headers, expectedStatus = 201) {
+  if (uploadMode !== 'signed-post') return request('/media/assets', expectedStatus, write('POST', headers, input));
+  const bytes = Buffer.from(input.base64, 'base64');
+  const reservation = await request(
+    '/media/assets/uploads',
+    201,
+    write('POST', headers, {
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      byteSize: bytes.length,
+      idempotencyKey: randomUUID(),
+    }),
+  );
+  const form = new FormData();
+  for (const [key, value] of Object.entries(reservation.upload.fields)) form.append(key, value);
+  form.append('file', new Blob([bytes], { type: input.mimeType }), input.fileName);
+  assert.equal(
+    (await fetch(reservation.upload.url, { method: 'POST', body: form, signal: AbortSignal.timeout(15_000) })).status,
+    201,
+  );
+  return request('/media/assets/' + reservation.assetId + '/complete', expectedStatus, { method: 'POST', headers });
 }
 
 async function waitForJob(id, headers) {
@@ -92,16 +116,21 @@ try {
   const png = {
     fileName: 'smoke.png',
     mimeType: 'image/png',
-    base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL7sAAAAASUVORK5CYII=',
+    base64: (
+      await sharp({ create: { width: 32, height: 48, channels: 3, background: '#987' } })
+        .png()
+        .toBuffer()
+    ).toString('base64'),
   };
-  const image = await request('/media/assets', 201, write('POST', ownerAuth, png));
+  const image = await createImage(png, bootstrap.media?.uploadMode, ownerAuth);
   assert.equal(image.visibility, 'PRIVATE');
   await request('/media/assets/' + image.id, 404, { headers: outsiderAuth });
   await request('/media/assets/' + image.id, 404, { method: 'DELETE', headers: outsiderAuth });
-  await request(
-    '/media/assets',
+  await createImage(
+    { ...png, base64: Buffer.from('not an image').toString('base64') },
+    bootstrap.media?.uploadMode,
+    ownerAuth,
     400,
-    write('POST', ownerAuth, { ...png, base64: Buffer.from('not an image').toString('base64') }),
   );
   await request('/body-profiles', 404, write('POST', outsiderAuth, { name: 'Foreign image', sourceAssetId: image.id }));
   await request(
@@ -335,7 +364,7 @@ try {
     write('POST', ownerAuth, { ...jobInput, idempotencyKey: runId + '-archived' }),
   );
   await request('/wardrobe/items/' + clothing.id, 200, { method: 'DELETE', headers: ownerAuth });
-  const disposable = await request('/media/assets', 201, write('POST', ownerAuth, png));
+  const disposable = await createImage(png, bootstrap.media?.uploadMode, ownerAuth);
   await request('/media/assets/' + disposable.id, 200, { method: 'DELETE', headers: ownerAuth });
   await request('/media/assets/' + disposable.id, 404, { headers: ownerAuth });
   passed.push('owned content deletion and inactive generation input rejection');
@@ -352,10 +381,32 @@ try {
   assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: owner.user.id } })).status, 'SUSPENDED');
   passed.push('refresh rotation, replay revocation, logout and suspended login denial');
 
-  console.log(JSON.stringify({ mode: 'FREE_MODE/local-svg only', requestCount, passed }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        mode: 'FREE_MODE/local-svg only',
+        mediaUploadMode: bootstrap.media?.uploadMode ?? 'legacy-development-base64',
+        requestCount,
+        passed,
+      },
+      null,
+      2,
+    ),
+  );
 } finally {
   const userIds = [...fixtureUsers];
   if (userIds.length) {
+    // User cascades cannot atomically delete S3 objects: retain durable final-object cleanup first.
+    const assets = await prisma.mediaAsset.findMany({
+      where: { ownerId: { in: userIds }, storageDriver: 's3', status: 'READY' },
+      select: { objectKey: true },
+    });
+    for (const asset of assets)
+      await prisma.objectCleanup.upsert({
+        where: { objectKey: asset.objectKey },
+        create: { objectKey: asset.objectKey, notBefore: new Date() },
+        update: { notBefore: new Date() },
+      });
     // Only data created by this run is removed; existing users and content are never reset.
     await prisma.commentModerationAction.deleteMany({ where: { actorId: { in: userIds } } });
     await prisma.generationJob.deleteMany({ where: { userId: { in: userIds } } });

@@ -101,7 +101,9 @@ export class WardrobeService {
 
   private async assertAssetOwned(userId: string, assetId?: string) {
     if (!assetId) return;
-    const asset = await this.prisma.mediaAsset.findFirst({ where: { id: assetId, ownerId: userId, deletedAt: null } });
+    const asset = await this.prisma.mediaAsset.findFirst({
+      where: { id: assetId, ownerId: userId, status: 'READY', deletedAt: null },
+    });
     if (!asset) throw new NotFoundException('衣物图片不存在');
   }
 }

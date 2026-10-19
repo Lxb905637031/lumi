@@ -35,6 +35,7 @@ export async function login(): Promise<AuthSession> {
     method: 'POST',
     data: { code },
   });
+  clearSession();
   saveAccessToken(session.accessToken);
   saveRefreshToken(session.refreshToken);
   return session;
