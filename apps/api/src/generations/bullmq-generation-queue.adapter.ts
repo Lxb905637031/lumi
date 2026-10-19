@@ -23,21 +23,50 @@ export class BullMqGenerationQueueAdapter implements GenerationQueue {
   }
 
   async enqueue(command: EnqueueGenerationCommand): Promise<void> {
+    await this.bounded(this.publish(command));
+  }
+
+  private async publish(command: EnqueueGenerationCommand): Promise<void> {
+    const jobId = this.queueId(command.jobId, command.quotaAttempt);
+    const existing = await this.queue.getJob(jobId);
+    if (existing) {
+      const state = await existing.getState();
+      // DB remains authoritative; a durable QUEUED row may outlive its Redis record.
+      if (state === 'completed' || state === 'failed') await existing.remove();
+    }
     await this.queue.add(GENERATION_JOB_NAME, command, {
-      jobId: command.jobId,
+      jobId,
       attempts: this.attempts,
       backoff: { type: 'exponential', delay: this.backoffDelay },
       removeOnComplete: { count: 1000 },
-      removeOnFail: false,
+      removeOnFail: { count: 5000 },
     });
   }
 
   async retry(command: EnqueueGenerationCommand): Promise<void> {
-    await this.queue.remove(command.jobId);
+    // Manual attempts have distinct IDs: never remove/replace a still-active old worker.
     await this.enqueue(command);
   }
 
-  async cancel(jobId: string): Promise<void> {
-    await this.queue.remove(jobId);
+  async cancel(jobId: string, quotaAttempt?: number): Promise<void> {
+    await this.bounded(this.queue.remove(this.queueId(jobId, quotaAttempt)));
+  }
+
+  private async bounded<T>(operation: Promise<T>): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        operation,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('GENERATION_QUEUE_TIMEOUT')), 5000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private queueId(jobId: string, quotaAttempt = 0): string {
+    return quotaAttempt === 0 ? jobId : `${jobId}-attempt-${quotaAttempt}`;
   }
 }

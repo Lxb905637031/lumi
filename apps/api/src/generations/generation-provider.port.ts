@@ -5,6 +5,8 @@ export type GenerateImageCommand = {
   userId: string;
   profileVersionId: string;
   clothingAssetId: string;
+  inputSnapshot?: unknown;
+  signal?: AbortSignal;
 };
 
 export type GeneratedAsset = {

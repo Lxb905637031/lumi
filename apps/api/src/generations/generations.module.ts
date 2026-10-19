@@ -3,6 +3,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '../common/auth.guard';
 import { PrismaModule } from '../prisma/prisma.module';
+import { QuotaModule } from '../quota/quota.module';
+import { GenerationRecoveryService } from './generation-recovery.service';
 import { BullMqGenerationQueueAdapter } from './bullmq-generation-queue.adapter';
 import { GenerationsController } from './generations.controller';
 import { GENERATION_QUEUE, GENERATION_QUEUE_NAME } from './generation-queue.port';
@@ -14,6 +16,7 @@ import { GenerationsService } from './generations.service';
 @Module({
   imports: [
     PrismaModule,
+    QuotaModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
@@ -37,6 +40,7 @@ import { GenerationsService } from './generations.service';
     AuthGuard,
     BullMqGenerationQueueAdapter,
     GenerationProcessor,
+    GenerationRecoveryService,
     LocalGenerationProvider,
     { provide: GENERATION_QUEUE, useExisting: BullMqGenerationQueueAdapter },
     { provide: GENERATION_PROVIDER, useExisting: LocalGenerationProvider },

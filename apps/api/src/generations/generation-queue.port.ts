@@ -7,10 +7,12 @@ export type EnqueueGenerationCommand = {
   userId: string;
   profileVersionId: string;
   clothingAssetId: string;
+  /** Absent only on queue records written before quota migrations. */
+  quotaAttempt?: number;
 };
 
 export interface GenerationQueue {
   enqueue(command: EnqueueGenerationCommand): Promise<void>;
   retry(command: EnqueueGenerationCommand): Promise<void>;
-  cancel(jobId: string): Promise<void>;
+  cancel(jobId: string, quotaAttempt?: number): Promise<void>;
 }

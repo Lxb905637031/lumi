@@ -230,3 +230,23 @@ export type CreateGenerationInput = {
   clothingAssetId: string;
   idempotencyKey: string;
 };
+
+export type QuotaSummary = {
+  available: number;
+  reserved: number;
+  consumed: number;
+  granted: number;
+  policyVersion: string;
+  costPerGeneration: number;
+};
+
+export type QuotaLedgerEntry = {
+  id: string;
+  type: 'GRANT' | 'RESERVE' | 'COMMIT' | 'RELEASE';
+  jobId: string | null;
+  attempt: number | null;
+  deltaAvailable: number;
+  deltaReserved: number;
+  deltaConsumed: number;
+  createdAt: string;
+};

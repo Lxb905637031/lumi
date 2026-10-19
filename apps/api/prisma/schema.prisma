@@ -56,6 +56,19 @@ enum MediaStatus {
   DELETED
 }
 
+enum QuotaReservationStatus {
+  RESERVED
+  CONSUMED
+  RELEASED
+}
+
+enum QuotaEventType {
+  GRANT
+  RESERVE
+  COMMIT
+  RELEASE
+}
+
 model User {
   id                       String                    @id @default(cuid())
   wxOpenId                 String                    @unique @map("wx_open_id")
@@ -77,6 +90,7 @@ model User {
   notifications            Notification[]
   commentModerationActions CommentModerationAction[]
   adminCredential          AdminCredential?
+  quotaAccount             QuotaAccount?
 
   @@map("users")
 }
@@ -201,28 +215,86 @@ model ClothingItem {
 }
 
 model GenerationJob {
-  id               String              @id @default(cuid())
-  userId           String              @map("user_id")
-  profileVersionId String              @map("profile_version_id")
-  clothingAssetId  String              @map("clothing_asset_id")
-  idempotencyKey   String              @map("idempotency_key")
-  status           GenerationJobStatus @default(QUEUED)
-  provider         String              @default("local")
-  retryCount       Int                 @default(0) @map("retry_count")
-  errorCode        String?             @map("error_code")
-  nextAttemptAt    DateTime?           @default(now()) @map("next_attempt_at")
-  startedAt        DateTime?           @map("started_at")
-  completedAt      DateTime?           @map("completed_at")
-  createdAt        DateTime            @default(now()) @map("created_at")
-  updatedAt        DateTime            @updatedAt @map("updated_at")
-  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profileVersion   BodyProfileVersion  @relation(fields: [profileVersionId], references: [id])
-  clothingAsset    ClothingItem        @relation(fields: [clothingAssetId], references: [id])
-  outputs          GenerationOutput[]
+  id                String              @id @default(cuid())
+  userId            String              @map("user_id")
+  profileVersionId  String              @map("profile_version_id")
+  clothingAssetId   String              @map("clothing_asset_id")
+  idempotencyKey    String              @map("idempotency_key")
+  status            GenerationJobStatus @default(QUEUED)
+  provider          String              @default("local")
+  retryCount        Int                 @default(0) @map("retry_count")
+  quotaAttempt      Int                 @default(0) @map("quota_attempt")
+  inputSnapshot     Json?               @map("input_snapshot")
+  executionToken    String?             @map("execution_token")
+  leaseExpiresAt    DateTime?           @map("lease_expires_at")
+  errorCode         String?             @map("error_code")
+  nextAttemptAt     DateTime?           @default(now()) @map("next_attempt_at")
+  startedAt         DateTime?           @map("started_at")
+  completedAt       DateTime?           @map("completed_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileVersion    BodyProfileVersion  @relation(fields: [profileVersionId], references: [id])
+  clothingAsset     ClothingItem        @relation(fields: [clothingAssetId], references: [id])
+  outputs           GenerationOutput[]
+  quotaReservations QuotaReservation[]
 
   @@unique([userId, idempotencyKey])
+  @@unique([id, userId])
+  @@index([status, nextAttemptAt])
+  @@index([status, leaseExpiresAt])
   @@index([userId, status, createdAt])
   @@map("generation_jobs")
+}
+
+model QuotaAccount {
+  userId        String             @id @map("user_id")
+  available     Int
+  reserved      Int                @default(0)
+  consumed      Int                @default(0)
+  granted       Int
+  policyVersion String             @default("free-trial-v1") @map("policy_version")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservations  QuotaReservation[]
+  ledger        QuotaLedger[]
+
+  @@map("quota_accounts")
+}
+
+model QuotaReservation {
+  id        String                 @id @default(cuid())
+  jobId     String                 @map("job_id")
+  userId    String                 @map("user_id")
+  attempt   Int
+  status    QuotaReservationStatus @default(RESERVED)
+  createdAt DateTime               @default(now()) @map("created_at")
+  updatedAt DateTime               @updatedAt @map("updated_at")
+  job       GenerationJob          @relation(fields: [jobId, userId], references: [id, userId], onDelete: Cascade)
+  account   QuotaAccount           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([jobId, attempt])
+  @@index([userId, status])
+  @@map("quota_reservations")
+}
+
+model QuotaLedger {
+  id             String         @id @default(cuid())
+  userId         String         @map("user_id")
+  jobId          String?        @map("job_id")
+  attempt        Int?
+  eventKey       String         @unique @map("event_key")
+  type           QuotaEventType
+  deltaAvailable Int            @map("delta_available")
+  deltaReserved  Int            @map("delta_reserved")
+  deltaConsumed  Int            @map("delta_consumed")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  account        QuotaAccount   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([jobId])
+  @@map("quota_ledger")
 }
 
 model GenerationOutput {

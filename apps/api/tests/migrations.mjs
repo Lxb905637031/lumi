@@ -72,6 +72,26 @@ try {
     id,
     'preserved profile',
   );
+  const versionId = randomUUID();
+  const clothingId = randomUUID();
+  const jobId = randomUUID();
+  await legacy.client.$executeRawUnsafe(
+    `INSERT INTO "${legacy.schema}"."body_profile_versions" (id, profile_id, version, measurements) VALUES ($1, $2, 1, '{}'::jsonb)`,
+    versionId,
+    profileId,
+  );
+  await legacy.client.$executeRawUnsafe(
+    `INSERT INTO "${legacy.schema}"."clothing_items" (id, user_id, name, category, updated_at) VALUES ($1, $2, 'legacy shirt', 'TOP', NOW())`,
+    clothingId,
+    id,
+  );
+  await legacy.client.$executeRawUnsafe(
+    `INSERT INTO "${legacy.schema}"."generation_jobs" (id, user_id, profile_version_id, clothing_asset_id, idempotency_key, updated_at) VALUES ($1, $2, $3, $4, 'legacy-job', NOW())`,
+    jobId,
+    id,
+    versionId,
+    clothingId,
+  );
   await legacy.client.$executeRawUnsafe(`ALTER TABLE "${legacy.schema}"."users" ADD COLUMN migration_test_drift TEXT`);
   await assert.rejects(() => adoptBaseline(legacy.databaseUrl), /Schema drift detected/);
   const [history] = await legacy.client.$queryRawUnsafe(
@@ -91,6 +111,11 @@ try {
   assert.equal(asset.status, 'READY');
   assert.equal(asset.storageDriver, 'local');
   assert.equal(asset.previewData, 'legacy-preview');
+  const job = await legacy.client.generationJob.findUniqueOrThrow({ where: { id: jobId } });
+  assert.equal(job.quotaAttempt, 0);
+  assert.equal(job.inputSnapshot, null);
+  assert.equal(job.executionToken, null);
+  assert.equal(await legacy.client.quotaAccount.count(), 0, 'Upgrades must not fabricate grants or historical charges');
   const migrations = await legacy.client.$queryRawUnsafe(
     `SELECT migration_name FROM "${legacy.schema}"."_prisma_migrations" WHERE finished_at IS NOT NULL`,
   );

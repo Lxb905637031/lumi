@@ -207,6 +207,16 @@ try {
     clothingAssetId: clothing.id,
     idempotencyKey: runId + '-job',
   };
+  await request('/quota', 401);
+  await request('/quota/ledger', 401);
+  const scopedQuota = await request('/quota?userId=' + owner.user.id, 200, { headers: outsiderAuth });
+  assert.equal(scopedQuota.consumed, 0);
+  await request('/quota', 404, write('POST', ownerAuth, { available: 1000 }));
+  const initialQuota = await request('/quota', 200, { headers: ownerAuth });
+  assert.equal(initialQuota.granted, 5, 'Smoke fixture assumes the documented development grant');
+  assert.equal(initialQuota.available, 5);
+  await request('/quota/ledger?limit=100', 400, { headers: ownerAuth });
+  await request('/quota/ledger?cursor=invalid', 400, { headers: ownerAuth });
   await request(
     '/generation-jobs',
     404,
@@ -215,6 +225,7 @@ try {
   const createdJob = await request('/generation-jobs', 201, write('POST', ownerAuth, jobInput));
   const duplicateJob = await request('/generation-jobs', 201, write('POST', ownerAuth, jobInput));
   assert.equal(duplicateJob.id, createdJob.id);
+  await request('/generation-jobs', 409, write('POST', ownerAuth, { ...jobInput, clothingAssetId: 'different-input' }));
   await request('/generation-jobs/' + createdJob.id, 404, { headers: outsiderAuth });
   const job = await waitForJob(createdJob.id, ownerAuth);
   assert.equal(job.status, 'SUCCEEDED');
@@ -222,6 +233,21 @@ try {
   assert.equal(job.outputs.length, 1);
   assert.equal(job.outputs[0].visibility, 'PRIVATE');
   assert.match(job.outputs[0].previewData, /^data:image\/svg\+xml;base64,/);
+  assert.deepEqual(await request('/quota', 200, { headers: ownerAuth }), {
+    ...initialQuota,
+    available: 4,
+    consumed: 1,
+  });
+  const ledgerFirst = await request('/quota/ledger?limit=1', 200, { headers: ownerAuth });
+  assert.equal(ledgerFirst.items[0].type, 'COMMIT');
+  const ledgerNext = await request('/quota/ledger?limit=1&cursor=' + encodeURIComponent(ledgerFirst.nextCursor), 200, {
+    headers: ownerAuth,
+  });
+  assert.equal(ledgerNext.items[0].type, 'RESERVE');
+  assert.notEqual(ledgerFirst.items[0].id, ledgerNext.items[0].id);
+  const outsiderLedger = await request('/quota/ledger?limit=50', 200, { headers: outsiderAuth });
+  assert.ok(outsiderLedger.items.every((entry) => entry.jobId !== job.id));
+  assert.equal(JSON.stringify(ledgerFirst).includes('eventKey'), false);
   const recovery = await prisma.generationJob.create({
     data: {
       userId: owner.user.id,
@@ -234,6 +260,11 @@ try {
   });
   await request('/generation-jobs/' + recovery.id + '/retry', 201, write('POST', ownerAuth));
   assert.equal((await waitForJob(recovery.id, ownerAuth)).status, 'SUCCEEDED');
+  assert.deepEqual(await request('/quota', 200, { headers: ownerAuth }), {
+    ...initialQuota,
+    available: 3,
+    consumed: 2,
+  });
   const cancellable = await prisma.generationJob.create({
     data: {
       userId: owner.user.id,
@@ -253,6 +284,33 @@ try {
     'CANCELLED',
   );
   passed.push('durable development generation, idempotency, recovery and cancellation');
+
+  const quotaJobs = await Promise.all(
+    Array.from({ length: 3 }, (_, index) =>
+      request(
+        '/generation-jobs',
+        201,
+        write('POST', ownerAuth, { ...jobInput, idempotencyKey: runId + '-quota-' + index }),
+      ),
+    ),
+  );
+  const exhausted = await request(
+    '/generation-jobs',
+    409,
+    write('POST', ownerAuth, { ...jobInput, idempotencyKey: runId + '-exhausted' }),
+  );
+  assert.equal(exhausted.code, 'FREE_QUOTA_EXHAUSTED');
+  for (const pending of quotaJobs) assert.equal((await waitForJob(pending.id, ownerAuth)).status, 'SUCCEEDED');
+  assert.deepEqual(await request('/quota', 200, { headers: ownerAuth }), {
+    ...initialQuota,
+    available: 0,
+    consumed: 5,
+  });
+  assert.equal(
+    await prisma.generationJob.count({ where: { userId: owner.user.id, idempotencyKey: runId + '-exhausted' } }),
+    0,
+  );
+  passed.push('real HTTP quota ownership, pagination, successful consumption and concurrent budget exhaustion');
 
   const postInput = {
     title: 'Smoke community post',

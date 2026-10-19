@@ -13,6 +13,7 @@ import {
 } from '../src/generations/generation-provider.port';
 import type { EnqueueGenerationCommand } from '../src/generations/generation-queue.port';
 import { LocalGenerationProvider } from '../src/generations/local-generation-provider';
+import { QuotaService } from '../src/quota/quota.service';
 
 test('local generation provider returns a deterministic private preview asset', async () => {
   const provider = new LocalGenerationProvider();
@@ -41,13 +42,17 @@ test('generation processor moves a permanently failing job to dead letter', asyn
         updates.push(data);
         return { count: 1 };
       },
-      findUnique: async () => ({ status: GenerationJobStatus.RUNNING }),
+      findUniqueOrThrow: async () => ({ id: 'job-failing-1', userId: 'user-1', quotaAttempt: 1, retryCount: 3 }),
     },
     generationOutput: {
       findFirst: async () => null,
     },
     notification: { create: async () => ({}) },
   };
+  Object.assign(prismaMock, {
+    $transaction: async (action: (tx: typeof prismaMock) => Promise<unknown>) => action(prismaMock),
+  });
+  let refunds = 0;
   const provider: GenerationProvider = {
     generate: async () => {
       throw new Error('provider unavailable');
@@ -58,7 +63,15 @@ test('generation processor moves a permanently failing job to dead letter', asyn
       GenerationProcessor,
       { provide: PrismaService, useValue: prismaMock },
       { provide: GENERATION_PROVIDER, useValue: provider },
-      { provide: ConfigService, useValue: { getOrThrow: () => 'true' } },
+      { provide: ConfigService, useValue: { getOrThrow: (key: string) => (key === 'FREE_MODE' ? 'true' : 3) } },
+      {
+        provide: QuotaService,
+        useValue: {
+          release: async () => {
+            refunds += 1;
+          },
+        },
+      },
     ],
   }).compile();
   const processor = moduleRef.get(GenerationProcessor);
@@ -74,4 +87,5 @@ test('generation processor moves a permanently failing job to dead letter', asyn
   assert.equal(updates[0]?.status, GenerationJobStatus.RUNNING);
   assert.equal(updates.at(-1)?.status, GenerationJobStatus.DEAD_LETTER);
   assert.equal(updates.at(-1)?.errorCode, 'Error');
+  assert.equal(refunds, 1);
 });

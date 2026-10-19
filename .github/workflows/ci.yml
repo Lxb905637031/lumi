@@ -59,6 +59,8 @@ jobs:
       - run: pnpm check
       - name: Empty database and legacy upgrade regression
         run: pnpm test:migrations
+      - name: Quota concurrency and generation recovery on isolated PostgreSQL
+        run: pnpm --filter @lumi/api test:quota
       - name: Start private development object storage
         run: |
           docker compose up -d seaweedfs

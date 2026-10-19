@@ -79,6 +79,12 @@ class Environment {
   @Max(60_000)
   GENERATION_QUEUE_BACKOFF_MS = 1_000;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  FREE_TRIAL_CREDITS = 5;
+
   @IsIn(['local', 's3'])
   MEDIA_STORAGE_DRIVER = 'local';
 

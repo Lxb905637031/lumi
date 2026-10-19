@@ -1,11 +1,16 @@
+import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import type { Job } from 'bullmq';
-import { GenerationJobStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { QuotaService } from '../quota/quota.service';
 import { GENERATION_QUEUE_NAME, type EnqueueGenerationCommand } from './generation-queue.port';
-import { GENERATION_PROVIDER, type GenerationProvider } from './generation-provider.port';
+import { GENERATION_PROVIDER, type GeneratedAsset, type GenerationProvider } from './generation-provider.port';
+
+// Only the development provider is wired. Real providers need timeout/cancellation acceptance.
+export const GENERATION_LEASE_MS = 120_000;
+export const GENERATION_TIMEOUT_MS = 60_000;
 
 @Injectable()
 @Processor(GENERATION_QUEUE_NAME)
@@ -16,132 +21,153 @@ export class GenerationProcessor extends WorkerHost {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(GENERATION_PROVIDER) private readonly provider: GenerationProvider,
     @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(QuotaService) private readonly quota: QuotaService,
   ) {
     super();
   }
 
-  async process(job: Job<EnqueueGenerationCommand>): Promise<void> {
-    const attempt = job.attemptsMade + 1;
-    const maxAttempts = typeof job.opts.attempts === 'number' ? job.opts.attempts : 1;
-    const claimed = await this.prisma.generationJob.updateMany({
-      where: { id: job.data.jobId, userId: job.data.userId, status: GenerationJobStatus.QUEUED },
-      data: {
-        status: GenerationJobStatus.RUNNING,
-        retryCount: attempt,
-        startedAt: new Date(),
-        errorCode: null,
-        nextAttemptAt: null,
-      },
-    });
-
-    if (claimed.count === 0) {
-      const current = await this.prisma.generationJob.findUnique({ where: { id: job.data.jobId } });
-      if (
-        !current ||
-        current.status === GenerationJobStatus.SUCCEEDED ||
-        current.status === GenerationJobStatus.CANCELLED ||
-        current.status === GenerationJobStatus.DEAD_LETTER
-      ) {
-        return;
-      }
-      return;
-    }
-
-    try {
-      if (this.config.getOrThrow<string>('FREE_MODE') !== 'true') {
-        throw new Error('GENERATION_PROVIDER_NOT_CONFIGURED');
-      }
-      const existingOutput = await this.prisma.generationOutput.findFirst({ where: { jobId: job.data.jobId } });
-      if (existingOutput) {
-        await this.prisma.generationJob.updateMany({
-          where: { id: job.data.jobId, status: GenerationJobStatus.RUNNING },
-          data: { status: GenerationJobStatus.SUCCEEDED, completedAt: new Date() },
-        });
-        return;
-      }
-
-      const generated = await this.provider.generate({
-        jobId: job.data.jobId,
-        userId: job.data.userId,
-        profileVersionId: job.data.profileVersionId,
-        clothingAssetId: job.data.clothingAssetId,
+  async process(delivery: Job<EnqueueGenerationCommand>): Promise<void> {
+    const token = randomUUID();
+    const maxAttempts = this.config.getOrThrow<number>('GENERATION_QUEUE_ATTEMPTS');
+    const job = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.generationJob.updateMany({
+        where: {
+          id: delivery.data.jobId,
+          userId: delivery.data.userId,
+          quotaAttempt: delivery.data.quotaAttempt ?? 0,
+          status: 'QUEUED',
+          retryCount: { lt: maxAttempts },
+          OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: new Date() } }],
+        },
+        data: {
+          status: 'RUNNING',
+          retryCount: { increment: 1 },
+          startedAt: new Date(),
+          errorCode: null,
+          nextAttemptAt: null,
+          executionToken: token,
+          leaseExpiresAt: new Date(Date.now() + GENERATION_LEASE_MS),
+        },
       });
+      return claimed.count === 1 ? tx.generationJob.findUniqueOrThrow({ where: { id: delivery.data.jobId } }) : null;
+    });
+    if (!job) return;
 
-      const current = await this.prisma.generationJob.findUnique({ where: { id: job.data.jobId } });
-      if (!current || current.status === GenerationJobStatus.CANCELLED) return;
-
+    const running = {
+      id: job.id,
+      userId: job.userId,
+      status: 'RUNNING' as const,
+      executionToken: token,
+      quotaAttempt: job.quotaAttempt,
+    };
+    try {
+      if (this.config.getOrThrow<string>('FREE_MODE') !== 'true') throw new Error('GENERATION_PROVIDER_NOT_CONFIGURED');
+      const existingOutput = await this.prisma.generationOutput.findFirst({ where: { jobId: job.id } });
+      let generated: GeneratedAsset | undefined;
+      if (!existingOutput) {
+        const abort = new AbortController();
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          generated = await Promise.race([
+            this.provider.generate({
+              jobId: job.id,
+              userId: job.userId,
+              profileVersionId: job.profileVersionId,
+              clothingAssetId: job.clothingAssetId,
+              inputSnapshot: job.inputSnapshot,
+              signal: abort.signal,
+            }),
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(() => {
+                abort.abort();
+                const error = new Error('Generation provider timed out');
+                error.name = 'GENERATION_TIMEOUT';
+                reject(error);
+              }, GENERATION_TIMEOUT_MS);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
       await this.prisma.$transaction(async (tx) => {
         const completed = await tx.generationJob.updateMany({
-          where: { id: job.data.jobId, status: GenerationJobStatus.RUNNING },
+          where: { ...running, leaseExpiresAt: { gt: new Date() } },
           data: {
-            status: GenerationJobStatus.SUCCEEDED,
+            status: 'SUCCEEDED',
             completedAt: new Date(),
             nextAttemptAt: null,
+            executionToken: null,
+            leaseExpiresAt: null,
           },
         });
         if (completed.count !== 1) return;
-
-        const asset = await tx.mediaAsset.upsert({
-          where: { objectKey: generated.objectKey },
-          update: {},
-          create: {
-            ownerId: job.data.userId,
-            objectKey: generated.objectKey,
-            mimeType: generated.mimeType,
-            byteSize: generated.byteSize,
-            sha256: generated.sha256,
-            previewData: generated.previewData,
-          },
-        });
-        await tx.generationOutput.create({ data: { jobId: job.data.jobId, assetId: asset.id } });
+        await this.quota.consume(tx, job);
+        if (generated) {
+          const asset = await tx.mediaAsset.upsert({
+            where: { objectKey: generated.objectKey },
+            update: {},
+            create: {
+              ownerId: job.userId,
+              objectKey: generated.objectKey,
+              mimeType: generated.mimeType,
+              byteSize: generated.byteSize,
+              sha256: generated.sha256,
+              previewData: generated.previewData,
+            },
+          });
+          await tx.generationOutput.create({ data: { jobId: job.id, assetId: asset.id } });
+        }
         await tx.notification.create({
           data: {
-            userId: job.data.userId,
+            userId: job.userId,
             type: 'GENERATION',
             title: '试穿生成完成',
             body: '你的试穿结果已经准备好，可以在生成记录中查看。',
             targetType: 'GENERATION_JOB',
-            targetId: job.data.jobId,
+            targetId: job.id,
           },
         });
       });
     } catch (error) {
-      const errorCode = this.toErrorCode(error);
-      const finalAttempt = attempt >= maxAttempts;
-      await this.prisma.generationJob.updateMany({
-        where: { id: job.data.jobId, status: GenerationJobStatus.RUNNING },
-        data: {
-          status: finalAttempt ? GenerationJobStatus.DEAD_LETTER : GenerationJobStatus.QUEUED,
-          errorCode,
-          nextAttemptAt: finalAttempt ? null : new Date(Date.now() + this.backoffFor(attempt)),
-        },
-      });
-      if (finalAttempt) {
-        await this.prisma.notification.create({
+      const finalAttempt = job.retryCount >= maxAttempts;
+      const errorCode = error instanceof Error ? error.name.slice(0, 80) : 'GENERATION_PROVIDER_ERROR';
+      await this.prisma.$transaction(async (tx) => {
+        const failed = await tx.generationJob.updateMany({
+          where: { ...running, leaseExpiresAt: { gt: new Date() } },
           data: {
-            userId: job.data.userId,
-            type: 'GENERATION',
-            title: '试穿生成失败',
-            body: '本次生成失败，未产生公开内容，可以稍后重试。',
-            targetType: 'GENERATION_JOB',
-            targetId: job.data.jobId,
+            status: finalAttempt ? 'DEAD_LETTER' : 'QUEUED',
+            errorCode,
+            nextAttemptAt: finalAttempt ? null : new Date(Date.now() + this.backoffFor(job.retryCount)),
+            completedAt: finalAttempt ? new Date() : null,
+            executionToken: null,
+            leaseExpiresAt: null,
           },
         });
-      }
-      this.logger.error(
-        `Generation job ${job.data.jobId} failed on attempt ${attempt}`,
-        error instanceof Error ? error.stack : undefined,
-      );
+        if (failed.count !== 1) return;
+        if (finalAttempt) {
+          await this.quota.release(tx, job);
+          await tx.notification.create({
+            data: {
+              userId: job.userId,
+              type: 'GENERATION',
+              title: '试穿生成失败',
+              body: '本次生成失败，预留额度已释放，可以稍后重试。',
+              targetType: 'GENERATION_JOB',
+              targetId: job.id,
+            },
+          });
+        }
+      });
+      this.logger.error(`Generation ${job.id} attempt ${job.retryCount} failed (${errorCode})`);
       throw error;
     }
   }
 
   private backoffFor(attempt: number): number {
-    return Math.min(30_000, 1_000 * 2 ** Math.max(0, attempt - 1));
-  }
-
-  private toErrorCode(error: unknown): string {
-    if (error instanceof Error && error.name.length > 0) return error.name.slice(0, 80);
-    return 'GENERATION_PROVIDER_ERROR';
+    return Math.min(
+      60_000,
+      this.config.getOrThrow<number>('GENERATION_QUEUE_BACKOFF_MS') * 2 ** Math.max(0, attempt - 1),
+    );
   }
 }
