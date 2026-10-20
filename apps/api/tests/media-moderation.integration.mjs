@@ -79,6 +79,10 @@ try {
 
   const profileAsset = await createAsset(owner.user.id, 'profile');
   const clothingAsset = await createAsset(owner.user.id, 'clothing');
+  const clothingAssetTwo = await createAsset(owner.user.id, 'clothing-two');
+  const clothingAssetThree = await createAsset(owner.user.id, 'clothing-three');
+  const unrelatedAssetOne = await createAsset(owner.user.id, 'unrelated-one');
+  const unrelatedAssetTwo = await createAsset(owner.user.id, 'unrelated-two');
   const profile = await request('/body-profiles', owner.accessToken, 201, 'POST', {
     name: '审核素材人物',
     sourceAssetId: profileAsset.id,
@@ -88,6 +92,30 @@ try {
     category: 'TOP',
     assetId: clothingAsset.id,
   });
+  await request('/wardrobe/items', owner.accessToken, 201, 'POST', {
+    name: '审核素材下装',
+    category: 'BOTTOM',
+    assetId: clothingAssetTwo.id,
+  });
+  await request('/wardrobe/items', owner.accessToken, 201, 'POST', {
+    name: '审核素材连衣裙',
+    category: 'DRESS',
+    assetId: clothingAssetThree.id,
+  });
+
+  const orderedUpdatedAt = Date.now();
+  for (const [asset, offset] of [
+    [clothingAsset, 5000],
+    [clothingAssetTwo, 4000],
+    [clothingAssetThree, 3000],
+    [unrelatedAssetOne, 2000],
+    [unrelatedAssetTwo, 1000],
+  ]) {
+    await db.mediaAsset.update({
+      where: { id: asset.id },
+      data: { updatedAt: new Date(orderedUpdatedAt - offset) },
+    });
+  }
 
   await request('/admin/moderation/media', normal.accessToken, 403);
   let page = await request('/admin/moderation/media?status=UNREVIEWED&limit=50', admin.accessToken);
@@ -126,6 +154,22 @@ try {
     filtered.items.some((item) => item.id === clothingAsset.id),
     true,
   );
+  const filteredFirstPage = await request(
+    '/admin/moderation/media?status=UNREVIEWED&kind=CLOTHING&limit=1',
+    admin.accessToken,
+  );
+  assert.equal(filteredFirstPage.items.length, 1);
+  assert.equal(filteredFirstPage.items[0].kind, 'CLOTHING');
+  assert.ok(filteredFirstPage.nextCursor);
+  const filteredSecondPage = await request(
+    `/admin/moderation/media?status=UNREVIEWED&kind=CLOTHING&limit=1&cursor=${encodeURIComponent(filteredFirstPage.nextCursor)}`,
+    admin.accessToken,
+  );
+  assert.equal(filteredSecondPage.items.length, 1);
+  assert.equal(filteredSecondPage.items[0].kind, 'CLOTHING');
+  assert.notEqual(filteredSecondPage.items[0].id, filteredFirstPage.items[0].id);
+  assert.ok([clothingAsset.id, clothingAssetTwo.id, clothingAssetThree.id].includes(filteredFirstPage.items[0].id));
+  assert.ok([clothingAsset.id, clothingAssetTwo.id, clothingAssetThree.id].includes(filteredSecondPage.items[0].id));
   await request('/generation-jobs', owner.accessToken, 409, 'POST', {
     profileVersionId: profile.id,
     clothingAssetId: clothing.id,

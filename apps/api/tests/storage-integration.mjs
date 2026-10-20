@@ -98,6 +98,9 @@ try {
   await request('/media/assets/uploads', 400, json('POST', owner.headers, { ...input, byteSize: 5 * 1024 * 1024 + 1 }));
   await request('/media/assets/uploads', 400, json('POST', owner.headers, { ...input, objectKey: 'attacker-chosen' }));
   const reservation = await request('/media/assets/uploads', 201, json('POST', owner.headers, input));
+  const signedUploadOrigin = new URL(reservation.upload.url).origin;
+  if (process.env.LUMI_EXPECTED_UPLOAD_ORIGIN)
+    assert.equal(signedUploadOrigin, process.env.LUMI_EXPECTED_UPLOAD_ORIGIN);
   assert.equal(
     (await request('/media/assets/uploads', 201, json('POST', owner.headers, input))).assetId,
     reservation.assetId,
@@ -267,7 +270,12 @@ try {
   passed.push('idempotent logical delete, actual physical deletion, orphan collection and live-object protection');
   console.log(
     JSON.stringify(
-      { mode: 'real local S3/PostgreSQL/Nest HTTP, not AI or production acceptance', requests, passed },
+      {
+        mode: 'real local S3/PostgreSQL/Nest HTTP, not AI or production acceptance',
+        signedUploadOrigin,
+        requests,
+        passed,
+      },
       null,
       2,
     ),

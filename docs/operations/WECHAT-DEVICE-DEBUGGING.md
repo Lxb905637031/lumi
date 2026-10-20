@@ -12,10 +12,10 @@
    LUMI_DEVICE_HOST=192.168.1.10 docker compose -f docker-compose.yml -f docker-compose.device.yml up -d --no-deps seaweedfs
    ```
 
-4. 停止已有 API 进程后，通过局域网存储地址启动 API。此环境变量仅作用于该进程；根目录 `.env` 中的本机存储地址仍供本地初始化和回归使用。
+4. 停止已有 API 进程后，设置签发给手机的存储地址。服务端继续通过根目录 `.env` 中的内部 `S3_ENDPOINT` 访问对象存储：
 
    ```bash
-   S3_ENDPOINT=http://192.168.1.10:59000 pnpm --filter @lumi/api start
+   S3_PUBLIC_ENDPOINT=http://192.168.1.10:59000 pnpm --filter @lumi/api start
    ```
 
 5. 关闭微信工具中的本项目，执行 `pnpm --filter @lumi/miniapp build:device`，然后重新打开本项目并重新发起真机调试。手机退出旧调试会话后重新扫码，以载入新包。
@@ -24,7 +24,7 @@
 
 ## 关闭局域网存储入口
 
-先停止带 `S3_ENDPOINT` 覆盖值的 API，执行 `docker compose -f docker-compose.yml up -d --no-deps seaweedfs`，再用 `pnpm --filter @lumi/api start` 恢复本机模式。此操作不删除数据卷。
+先停止带 `S3_PUBLIC_ENDPOINT` 覆盖值的 API，再用 `pnpm --filter @lumi/api start` 恢复本机模式。此操作不删除数据卷。
 
 ## 验收证据
 

@@ -14,24 +14,31 @@ import type { ObjectStorage } from './object-storage.port';
 @Injectable()
 export class S3ObjectStorageAdapter implements ObjectStorage, OnModuleDestroy {
   private readonly client: S3Client | null;
+  private readonly publicClient: S3Client | null;
   private readonly bucket: string;
 
   constructor(config: ConfigService) {
     this.bucket = config.get<string>('S3_BUCKET') ?? '';
-    this.client =
-      config.getOrThrow<string>('MEDIA_STORAGE_DRIVER') === 's3'
-        ? new S3Client({
-            endpoint: config.getOrThrow<string>('S3_ENDPOINT'),
-            region: config.getOrThrow<string>('S3_REGION'),
-            credentials: {
-              accessKeyId: config.getOrThrow<string>('S3_ACCESS_KEY'),
-              secretAccessKey: config.getOrThrow<string>('S3_SECRET_KEY'),
-            },
-            forcePathStyle: true,
-            maxAttempts: 2,
-            requestHandler: { connectionTimeout: 5_000, requestTimeout: 15_000 },
-          })
-        : null;
+    if (config.getOrThrow<string>('MEDIA_STORAGE_DRIVER') !== 's3') {
+      this.client = null;
+      this.publicClient = null;
+      return;
+    }
+    const options = {
+      region: config.getOrThrow<string>('S3_REGION'),
+      credentials: {
+        accessKeyId: config.getOrThrow<string>('S3_ACCESS_KEY'),
+        secretAccessKey: config.getOrThrow<string>('S3_SECRET_KEY'),
+      },
+      forcePathStyle: true,
+      maxAttempts: 2,
+      requestHandler: { connectionTimeout: 5_000, requestTimeout: 15_000 },
+    } as const;
+    this.client = new S3Client({ ...options, endpoint: config.getOrThrow<string>('S3_ENDPOINT') });
+    this.publicClient = new S3Client({
+      ...options,
+      endpoint: config.get<string>('S3_PUBLIC_ENDPOINT') ?? config.getOrThrow<string>('S3_ENDPOINT'),
+    });
   }
 
   private getClient() {
@@ -41,10 +48,12 @@ export class S3ObjectStorageAdapter implements ObjectStorage, OnModuleDestroy {
 
   onModuleDestroy() {
     this.client?.destroy();
+    this.publicClient?.destroy();
   }
 
   createUpload(key: string, mimeType: string, byteSize: number, expiresIn: number) {
-    return createPresignedPost(this.getClient(), {
+    if (!this.publicClient) throw new ServiceUnavailableException('私有对象存储未启用');
+    return createPresignedPost(this.publicClient, {
       Bucket: this.bucket,
       Key: key,
       Expires: expiresIn,
@@ -97,8 +106,9 @@ export class S3ObjectStorageAdapter implements ObjectStorage, OnModuleDestroy {
   }
 
   signedRead(key: string, expiresIn: number) {
+    if (!this.publicClient) throw new ServiceUnavailableException('私有对象存储未启用');
     return getSignedUrl(
-      this.getClient(),
+      this.publicClient,
       new GetObjectCommand({ Bucket: this.bucket, Key: key, ResponseCacheControl: 'private, no-store' }),
       { expiresIn },
     );

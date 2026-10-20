@@ -7,6 +7,7 @@ import { MediaService } from '../media/media.service';
 import type { MediaReviewKind, MediaReviewQueryDto, UpdateMediaReviewDto } from './media-moderation.dto';
 
 type MediaRow = Prisma.MediaAssetGetPayload<{ include: { _count: { select: { generationOutputs: true } } } }>;
+type ClassifiedMediaRow = { id: string; kind: MediaReviewKind; updatedAt: Date };
 
 @Injectable()
 export class MediaModerationService {
@@ -17,31 +18,53 @@ export class MediaModerationService {
 
   async list(query: MediaReviewQueryDto): Promise<CursorPage<AdminMediaAsset>> {
     const cursor = decodeTimestampCursor(query.cursor);
+    const mediaFilters: Prisma.Sql[] = [
+      Prisma.sql`m.status IN ('READY', 'REJECTED')`,
+      Prisma.sql`m.deleted_at IS NULL`,
+    ];
+    const classifiedFilters: Prisma.Sql[] = [];
+    if (query.status) mediaFilters.push(Prisma.sql`m.review_status::text = ${query.status}`);
+    if (query.kind) classifiedFilters.push(Prisma.sql`classified.kind = ${query.kind}`);
+    if (cursor) {
+      classifiedFilters.push(
+        Prisma.sql`(classified.updated_at < ${new Date(cursor.timestamp)} OR (classified.updated_at = ${new Date(cursor.timestamp)} AND classified.id < ${cursor.id}))`,
+      );
+    }
+    const classifiedRows = await this.prisma.$queryRaw<ClassifiedMediaRow[]>(Prisma.sql`
+      WITH classified AS (
+        SELECT
+          m.id,
+          m.updated_at,
+          CASE
+            WHEN EXISTS (SELECT 1 FROM body_profile_versions p WHERE p.source_asset_id = m.id) THEN 'PROFILE'
+            WHEN EXISTS (SELECT 1 FROM clothing_items c WHERE c.asset_id = m.id) THEN 'CLOTHING'
+            WHEN EXISTS (SELECT 1 FROM generation_outputs g WHERE g.asset_id = m.id) THEN 'GENERATION_OUTPUT'
+            ELSE 'UPLOAD'
+          END::text AS kind
+        FROM media_assets m
+        WHERE ${Prisma.join(mediaFilters, ' AND ')}
+      )
+      SELECT classified.id, classified.kind, classified.updated_at AS "updatedAt"
+      FROM classified
+      ${classifiedFilters.length ? Prisma.sql`WHERE ${Prisma.join(classifiedFilters, ' AND ')}` : Prisma.empty}
+      ORDER BY classified.updated_at DESC, classified.id DESC
+      LIMIT ${query.limit + 1}
+    `);
+    const hasNext = classifiedRows.length > query.limit;
+    const pageRows = hasNext ? classifiedRows.slice(0, query.limit) : classifiedRows;
     const rows = await this.prisma.mediaAsset.findMany({
-      where: {
-        ...(query.status ? { reviewStatus: query.status } : {}),
-        status: { in: ['READY', 'REJECTED'] },
-        deletedAt: null,
-        ...(cursor
-          ? {
-              OR: [
-                { updatedAt: { lt: new Date(cursor.timestamp) } },
-                { updatedAt: new Date(cursor.timestamp), id: { lt: cursor.id } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-      take: query.limit + 1,
+      where: { id: { in: pageRows.map((row) => row.id) } },
       include: { _count: { select: { generationOutputs: true } } },
     });
-    const hasNext = rows.length > query.limit;
-    const items = hasNext ? rows.slice(0, query.limit) : rows;
-    const kinds = await this.resolveKinds(items);
-    const filtered = query.kind ? items.filter((row) => kinds.get(row.id) === query.kind) : items;
-    const last = items.at(-1);
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    const last = pageRows.at(-1);
     return {
-      items: await Promise.all(filtered.map((row) => this.toContract(row, kinds.get(row.id) ?? 'UPLOAD'))),
+      items: await Promise.all(
+        pageRows.flatMap((classified) => {
+          const row = rowById.get(classified.id);
+          return row ? [this.toContract(row, classified.kind)] : [];
+        }),
+      ),
       nextCursor:
         hasNext && last ? encodeTimestampCursor({ timestamp: last.updatedAt.toISOString(), id: last.id }) : null,
     };

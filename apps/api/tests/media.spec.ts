@@ -69,12 +69,34 @@ test('S3 configuration fails closed and never echoes secrets from invalid values
     () => validateEnvironment({ ...s3, NODE_ENV: 'production', MEDIA_STORAGE_DRIVER: 's3' }),
     /must use HTTPS/,
   );
+  assert.throws(
+    () =>
+      validateEnvironment({
+        ...s3,
+        MEDIA_STORAGE_DRIVER: 's3',
+        S3_ENDPOINT: 'https://storage.internal',
+        S3_PUBLIC_ENDPOINT: 'http://storage.example/path',
+      }),
+    /S3_PUBLIC_ENDPOINT must be an HTTP\(S\) origin/,
+  );
+  assert.throws(
+    () =>
+      validateEnvironment({
+        ...s3,
+        NODE_ENV: 'production',
+        MEDIA_STORAGE_DRIVER: 's3',
+        S3_ENDPOINT: 'https://storage.internal',
+        S3_PUBLIC_ENDPOINT: 'http://storage.example',
+      }),
+    /S3_PUBLIC_ENDPOINT must use HTTPS/,
+  );
   assert.equal(
     validateEnvironment({
       ...s3,
       NODE_ENV: 'production',
       MEDIA_STORAGE_DRIVER: 's3',
       S3_ENDPOINT: 'https://storage.example',
+      S3_PUBLIC_ENDPOINT: 'https://cdn.example',
     }).MEDIA_STORAGE_DRIVER,
     's3',
   );

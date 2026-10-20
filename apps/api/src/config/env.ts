@@ -106,6 +106,10 @@ class Environment {
   @IsString()
   S3_ENDPOINT?: string;
 
+  @IsOptional()
+  @IsString()
+  S3_PUBLIC_ENDPOINT?: string;
+
   @IsString()
   S3_REGION = 'us-east-1';
 
@@ -172,6 +176,26 @@ export function validateEnvironment(config: Record<string, unknown>) {
     }
     if (environment.NODE_ENV === 'production' && endpoint.protocol !== 'https:')
       throw new Error('S3_ENDPOINT must use HTTPS in production');
+    if (environment.S3_PUBLIC_ENDPOINT) {
+      let publicEndpoint: URL;
+      try {
+        publicEndpoint = new URL(environment.S3_PUBLIC_ENDPOINT);
+      } catch {
+        throw new Error('S3_PUBLIC_ENDPOINT must be a valid URL');
+      }
+      if (
+        !['http:', 'https:'].includes(publicEndpoint.protocol) ||
+        publicEndpoint.username ||
+        publicEndpoint.password ||
+        publicEndpoint.search ||
+        publicEndpoint.hash ||
+        publicEndpoint.pathname !== '/'
+      ) {
+        throw new Error('S3_PUBLIC_ENDPOINT must be an HTTP(S) origin without credentials, path or query');
+      }
+      if (environment.NODE_ENV === 'production' && publicEndpoint.protocol !== 'https:')
+        throw new Error('S3_PUBLIC_ENDPOINT must use HTTPS in production');
+    }
   }
   return environment;
 }
