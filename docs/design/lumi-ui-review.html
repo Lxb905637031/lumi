@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="data:," />
+    <title>Lumi · 全量界面设计评审</title>
+    <link rel="stylesheet" href="./lumi-ui-review.css?v=20261020-3" />
+    <script src="./lumi-ui-review.js?v=20261020-3" defer></script>
+  </head>
+  <body>
+    <header class="review-nav">
+      <a class="review-logo" href="./lumi-ui-review.html">lumi<span>DESIGN REVIEW / 02</span></a>
+      <nav aria-label="设计方向">
+        <a data-theme="a" href="?theme=a">A · 发现流</a>
+        <a data-theme="b" href="?theme=b">B · 数字衣橱</a>
+        <a data-theme="c" href="?theme=c">C · 编辑穿搭</a>
+      </nav>
+      <span class="review-stamp">待审设计稿 · 非线上产品</span>
+    </header>
+    <main id="review"></main>
+    <dialog id="screen-dialog" aria-label="单页放大预览">
+      <button class="dialog-close" aria-label="关闭放大预览">关闭预览 ×</button>
+      <div id="dialog-content"></div>
+    </dialog>
+    <div id="review-toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
