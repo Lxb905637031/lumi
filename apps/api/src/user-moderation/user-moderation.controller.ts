@@ -19,6 +19,11 @@ export class UserModerationController {
     return this.moderation.list(query);
   }
 
+  @Get(':id/actions')
+  actions(@Param('id') id: string, @Query() query: UserModerationQueryDto) {
+    return this.moderation.actions(id, query);
+  }
+
   @Patch(':id/status')
   update(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateUserModerationDto) {
     return this.moderation.update(id, user.id, dto);

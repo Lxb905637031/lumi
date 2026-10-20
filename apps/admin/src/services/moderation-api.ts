@@ -136,3 +136,18 @@ export function updateAdminUser(
     body: JSON.stringify(input),
   });
 }
+
+export type UserModerationAction = {
+  id: string;
+  actorId: string | null;
+  fromStatus: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+  toStatus: 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+  fromRole: 'USER' | 'MODERATOR' | 'ADMIN';
+  toRole: 'USER' | 'MODERATOR' | 'ADMIN';
+  reason: string;
+  createdAt: string;
+};
+
+export function listUserModerationActions(id: string) {
+  return adminRequest<CursorPage<UserModerationAction>>(`/admin/users/${id}/actions?limit=20`);
+}

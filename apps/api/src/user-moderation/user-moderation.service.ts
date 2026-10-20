@@ -96,6 +96,43 @@ export class UserModerationService {
     return this.toContract(updated);
   }
 
+  async actions(id: string, query: UserModerationQueryDto) {
+    const cursor = decodeTimestampCursor(query.cursor);
+    const rows = await this.prisma.userModerationAction.findMany({
+      where: {
+        userId: id,
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(cursor.timestamp) } },
+                { createdAt: new Date(cursor.timestamp), id: { lt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: query.limit + 1,
+      select: {
+        id: true,
+        actorId: true,
+        fromStatus: true,
+        toStatus: true,
+        fromRole: true,
+        toRole: true,
+        reason: true,
+        createdAt: true,
+      },
+    });
+    const hasNext = rows.length > query.limit;
+    const items = hasNext ? rows.slice(0, query.limit) : rows;
+    const last = items.at(-1);
+    return {
+      items: items.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+      nextCursor:
+        hasNext && last ? encodeTimestampCursor({ timestamp: last.createdAt.toISOString(), id: last.id }) : null,
+    };
+  }
+
   private toContract(row: UserRow): AdminUser {
     return {
       id: row.id,

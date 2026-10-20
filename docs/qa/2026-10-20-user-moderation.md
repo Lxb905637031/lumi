@@ -10,10 +10,11 @@
 - 解封和角色变更使用 `expectedUpdatedAt`，旧时间戳返回 409，防止并发后台覆盖。
 - 已注销账号拒绝恢复；管理员不能修改自己的账号。
 - 审计记录保存原状态、目标状态、原角色、目标角色、操作者和原因。
+- 后台可以读取单个用户最近 20 条处罚/角色变更记录，并以游标继续分页。
 
 ## 证据
 
-`pnpm --filter @lumi/api test:user-moderation`：18 次真实 loopback HTTP 请求通过。
+`pnpm --filter @lumi/api test:user-moderation`：19 次真实 loopback HTTP 请求通过。
 
 测试仅使用唯一的本地 fixture 账号，结束时清理账号和审计数据；未调用外部服务或真实微信接口。
 

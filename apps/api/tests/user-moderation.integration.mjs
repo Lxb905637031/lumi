@@ -71,6 +71,9 @@ try {
     reason: '违反社区规范',
   });
   assert.equal(suspended.status, 'SUSPENDED');
+  const suspensionHistory = await request(`/admin/users/${target.user.id}/actions?limit=20`, admin.accessToken);
+  assert.equal(suspensionHistory.items.length, 1);
+  assert.equal(suspensionHistory.items[0].toStatus, 'SUSPENDED');
   await request('/body-profiles', target.accessToken, 401);
   await request('/auth/wechat/login', undefined, 401, 'POST', {
     code: `local:user-moderation:${runId}:target`,
