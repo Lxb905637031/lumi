@@ -16,13 +16,10 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
   const exhausted = !!state.quota && state.quota.available < state.quota.costPerGeneration;
   return (
     <View className="try-on-empty-state">
-      <Text className="try-on-empty-title">创建私有试穿参考</Text>
+      <Text className="try-on-empty-title">这一次，试着换个搭配</Text>
       <Text className="try-on-empty-copy">
         先明确选择人物版本和单件衣物，再确认生成。当前仅为本地预览，不是真实 AI，不保证尺码合身。
       </Text>
-      <AppButton block variant="secondary" onClick={onGoProfile}>
-        完善档案和衣橱
-      </AppButton>
       {!state.pendingInput && !active && (
         <AppButton block variant="secondary" loading={state.busy} onClick={() => void workflow.prepare()}>
           {state.loaded ? '刷新资料和额度' : '选择试穿资料'}
@@ -30,8 +27,8 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
       )}
       {state.loaded && (
         <>
-          <QuotaStatus quota={state.quota} />
           <TryOnInputPicker state={state} workflow={workflow} />
+          <QuotaStatus quota={state.quota} />
           {!active && (
             <AppButton
               block
@@ -39,10 +36,20 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
               disabled={!state.profileVersionId || !state.clothingId || (exhausted && !state.pendingInput)}
               onClick={() => void workflow.start()}
             >
-              {state.pendingInput ? '继续提交原任务' : '确认输入并生成'}
+              {state.pendingInput ? '继续提交原任务' : '下一步 · 确认试穿'}
             </AppButton>
           )}
         </>
+      )}
+      {!active && !state.pendingInput && (
+        <View className="try-on-manage">
+          <AppButton compact variant="secondary" onClick={onGoProfile}>
+            管理人物档案
+          </AppButton>
+          <AppButton compact variant="secondary" onClick={() => void Taro.switchTab({ url: '/pages/wardrobe/index' })}>
+            管理衣橱
+          </AppButton>
+        </View>
       )}
       {exhausted && <InlineFeedback message="免费额度不足；仍可查询、取消已有任务，不开放付费购买。" />}
       {state.error && <InlineFeedback message={state.error} tone="error" />}

@@ -2,11 +2,10 @@
   display: grid;
   gap: 8px;
   margin: 28px 0;
-  padding: 36px 20px;
-  border: 1px solid var(--lumi-color-line);
-  border-radius: var(--lumi-radius-media);
-  background: var(--lumi-color-surface);
-  text-align: center;
+  padding: 32px 0;
+  border-top: 1px solid var(--lumi-color-line);
+  border-bottom: 1px solid var(--lumi-color-line);
+  text-align: left;
 }
 
 .resource-state--error {
@@ -34,7 +33,7 @@
   display: grid;
   gap: 12px;
   width: 70%;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .resource-loading-lines view {

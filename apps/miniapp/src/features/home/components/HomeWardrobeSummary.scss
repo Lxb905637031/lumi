@@ -1,0 +1,67 @@
+.home-assets {
+  margin: 16px 0 24px;
+}
+.home-resume {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: var(--lumi-color-brand-soft);
+  border-radius: var(--lumi-radius-control);
+}
+.home-resume-copy {
+  flex: 1;
+  min-width: 0;
+}
+.home-resume-title {
+  display: block;
+  font-size: 26px;
+  font-weight: 600;
+}
+.home-assets-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0 12px;
+  gap: 12px;
+}
+.home-assets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.home-asset {
+  min-width: 0;
+}
+.home-asset-image {
+  display: block;
+  width: 100%;
+  height: 210px;
+  border-radius: var(--lumi-radius-media);
+  background: var(--lumi-color-surface-muted);
+}
+.home-asset-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 20px;
+  color: var(--lumi-color-muted);
+}
+.home-asset-name {
+  display: block;
+  margin-top: 12px;
+  font-size: 23px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-assets-error {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  color: var(--lumi-color-muted);
+  font-size: 22px;
+}

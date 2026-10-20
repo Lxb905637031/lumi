@@ -19,7 +19,7 @@ export function PostImagePicker({
 }) {
   return (
     <>
-      <View>
+      <View className="feed-image-list">
         {assets.map((asset) => (
           <Image
             key={asset.id}

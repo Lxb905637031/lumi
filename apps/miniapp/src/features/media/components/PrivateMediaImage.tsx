@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, View } from '@tarojs/components';
-import { AppButton } from '../../../components/ui/AppButton/AppButton';
-import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
+import { Button, Image, Text, View } from '@tarojs/components';
 import { getSessionEpoch } from '../../../services/http-client';
 import { getMediaAsset } from '../media.api';
+import './PrivateMediaImage.scss';
 
 /** Short-lived authorized URLs stay in memory; an expired/failed read is explicitly refreshed. */
 type PrivateMediaImageProps = {
@@ -47,20 +46,24 @@ export function PrivateMediaImage({
     };
   }, [assetId]);
   return (
-    <View>
+    <View className={`${className} private-media-frame`}>
       {url && !error && (
         <Image
-          className={className}
+          className="private-media-image"
           src={url}
           mode={mode}
           onError={() => setError('图片加载失败或凭证已过期，可重新读取')}
         />
       )}
-      {error && <InlineFeedback message={error} tone="error" />}
       {(!url || error) && (
-        <AppButton block variant="secondary" loading={busy} onClick={() => void load()}>
-          重新读取私有图片
-        </AppButton>
+        <View className="private-media-status" aria-busy={busy}>
+          <Text>{busy ? '图片加载中' : '图片暂不可用'}</Text>
+          {error && (
+            <Button className="private-media-retry" disabled={busy} onClick={() => void load()} aria-label={error}>
+              重新读取
+            </Button>
+          )}
+        </View>
       )}
     </View>
   );

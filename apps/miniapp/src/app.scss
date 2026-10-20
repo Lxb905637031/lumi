@@ -4,7 +4,7 @@ page {
   background: var(--lumi-color-canvas);
   color: var(--lumi-color-ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
-  font-size: 27px;
+  font-size: 26px;
   line-height: 1.5;
 }
 
@@ -24,7 +24,7 @@ image {
 
 .page {
   min-height: 100vh;
-  padding: 32px var(--lumi-space-page-x) calc(128px + var(--lumi-safe-bottom));
+  padding: 28px var(--lumi-space-page-x) calc(40px + var(--lumi-safe-bottom));
   box-sizing: border-box;
 }
 
@@ -62,7 +62,7 @@ image {
 
 .surface {
   border: 1px solid var(--lumi-color-line);
-  border-radius: var(--lumi-radius-media);
+  border-radius: var(--lumi-radius-control);
   background: var(--lumi-color-surface);
 }
 
@@ -80,5 +80,14 @@ image {
   color: var(--lumi-color-muted);
   font-size: 20px;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+}
+
+.page-description,
+.section-caption {
+  overflow-wrap: anywhere;
+}
+
+.page .lumi-button + .lumi-button {
+  margin-top: 16px;
 }

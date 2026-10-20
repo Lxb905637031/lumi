@@ -1,18 +1,23 @@
 page {
-  --lumi-color-canvas: #f7f8f4;
+  --lumi-color-canvas: #fdfbf9;
   --lumi-color-surface: #ffffff;
-  --lumi-color-surface-muted: #f1f3ee;
-  --lumi-color-ink: #1f2722;
-  --lumi-color-muted: #687368;
-  --lumi-color-line: #dee4db;
-  --lumi-color-brand: #35483d;
-  --lumi-color-brand-pressed: #26382e;
-  --lumi-color-brand-soft: #e9eee8;
-  --lumi-color-accent: #b27650;
-  --lumi-color-error: #a64b3b;
-  --lumi-color-success: #3d7252;
-  --lumi-radius-control: 10px;
-  --lumi-radius-media: 14px;
+  --lumi-color-surface-muted: #f1eeeb;
+  --lumi-color-ink: #292326;
+  --lumi-color-muted: #74676c;
+  --lumi-color-line: #e5dddf;
+  --lumi-color-brand: #763b50;
+  --lumi-color-brand-pressed: #592a3b;
+  --lumi-color-brand-soft: #f4e9ed;
+  --lumi-color-accent: #95634b;
+  --lumi-color-error: #a33236;
+  --lumi-color-error-soft: #fff0ef;
+  --lumi-color-error-line: #ebc5c6;
+  --lumi-color-success: #35654c;
+  --lumi-color-success-soft: #edf5ef;
+  --lumi-color-disabled: #e6dfe2;
+  --lumi-color-disabled-ink: #83777d;
+  --lumi-radius-control: 16px;
+  --lumi-radius-media: 16px;
   --lumi-space-page-x: 32px;
   --lumi-safe-bottom: env(safe-area-inset-bottom);
 }

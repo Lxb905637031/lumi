@@ -5,6 +5,7 @@ import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceSt
 import { useCursorList } from '../../../hooks/useCursorList';
 import { listCommunityPosts } from '../../community/community.api';
 import { PostCard } from '../../community/components/PostCard';
+import { FeedEmptyState } from './FeedEmptyState';
 import './InspirationGrid.scss';
 
 export function InspirationGrid() {
@@ -13,7 +14,7 @@ export function InspirationGrid() {
     <View className="inspiration-feed">
       <View className="feed-toolbar">
         <View>
-          <Text className="feed-heading">推荐</Text>
+          <Text className="feed-heading">穿搭灵感</Text>
           <Text className="feed-caption">审核通过的穿搭灵感</Text>
         </View>
         <AppButton compact variant="secondary" onClick={() => void Taro.navigateTo({ url: '/pages/publish/index' })}>
@@ -21,11 +22,11 @@ export function InspirationGrid() {
         </AppButton>
       </View>
       <ResourceStatus
-        loading={feed.loading}
+        loading={feed.loading && !feed.items.length}
         error={feed.error}
-        empty={!feed.items.length}
         onRetry={() => void feed.reload()}
       />
+      {!feed.loading && !feed.error && !feed.items.length && <FeedEmptyState />}
       <View className="inspiration-grid">
         {[feed.items.filter((_, index) => index % 2 === 0), feed.items.filter((_, index) => index % 2 === 1)].map(
           (column, columnIndex) => (

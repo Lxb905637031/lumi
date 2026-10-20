@@ -3,6 +3,7 @@ import { Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
+import { AppIcon, type AppIconName } from '../../../components/ui/AppIcon/AppIcon';
 import { hasSession } from '../../../services/http-client';
 import { getAuthErrorMessage } from '../../auth/auth-error';
 import { ensureLogin, logout } from '../../auth/auth.api';
@@ -18,6 +19,16 @@ const destinations = [
   ['关注与粉丝', '/pages/follows/index', '管理你关注的创作者和关注关系'],
   ['账号与隐私', '/pages/privacy/index', '申请数据导出或管理账号注销'],
 ] as const;
+const destinationIcons: Record<(typeof destinations)[number][0], AppIconName> = {
+  人物档案: 'user-round',
+  我的衣橱: 'shirt',
+  试穿记录: 'clock',
+  我的发布: 'grid-2x2',
+  我的收藏: 'bookmark',
+  服务消息: 'bell',
+  关注与粉丝: 'user-round',
+  账号与隐私: 'shield-check',
+};
 
 export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
   const [authenticated, setAuthenticated] = useState(hasSession());
@@ -54,10 +65,12 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
   };
   return (
     <View className="profile-workspace">
-      <View className="profile-page-heading">
-        <Text className="profile-eyebrow">MY ACCOUNT</Text>
-        <Text className="profile-section-title">我的 Lumi</Text>
-        <Text className="profile-section-copy">你的私有资料、试穿记录和社区内容</Text>
+      <View className="profile-identity">
+        <AppIcon name="user-round" active />
+        <View>
+          <Text className="profile-record-title">{authenticated ? '我的私人衣橱' : '欢迎来到 Lumi'}</Text>
+          <Text className="profile-muted">照片与身体参数默认仅自己可见</Text>
+        </View>
       </View>
       {error && <InlineFeedback message={error} tone="error" />}
       {!authenticated ? (
@@ -73,11 +86,12 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
           <View className="profile-menu-list surface">
             {destinations.map(([title, url, description]) => (
               <View className="profile-menu-row" key={url} role="button" onClick={() => void openDestination(url)}>
+                <AppIcon name={destinationIcons[title]} />
                 <View className="profile-menu-copy">
                   <Text className="profile-record-title">{title}</Text>
                   <Text className="profile-muted">{description}</Text>
                 </View>
-                <Text className="profile-menu-action">管理</Text>
+                <AppIcon name="chevron-right" />
               </View>
             ))}
           </View>

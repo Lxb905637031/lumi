@@ -1,0 +1,36 @@
+.feed-empty-state {
+  margin: 28px 0;
+  padding: 36px 0;
+  border-top: 1px solid var(--lumi-color-line);
+  border-bottom: 1px solid var(--lumi-color-line);
+}
+.feed-empty-title,
+.feed-empty-description,
+.feed-empty-note {
+  display: block;
+}
+.feed-empty-title {
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--lumi-color-ink);
+}
+.feed-empty-description {
+  margin-top: 16px;
+  font-size: 26px;
+  line-height: 1.7;
+  color: var(--lumi-color-muted);
+}
+.feed-empty-actions {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+}
+.feed-empty-actions > .lumi-button + .lumi-button {
+  margin-top: 0;
+}
+.feed-empty-note {
+  margin-top: 24px;
+  color: var(--lumi-color-muted);
+  font-size: 22px;
+  line-height: 1.6;
+}

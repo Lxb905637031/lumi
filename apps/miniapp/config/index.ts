@@ -13,6 +13,7 @@ const config: UserConfigExport = defineConfig({
   outputRoot: 'dist',
   framework: 'react',
   compiler: 'webpack5',
+  copy: { patterns: [{ from: 'src/assets/icons', to: 'dist/assets/icons' }], options: {} },
   // Taro replaces configured env values at build time. Keeping this value out
   // of the runtime bundle is required because the WeChat JS runtime has no
   // Node.js `process` global.

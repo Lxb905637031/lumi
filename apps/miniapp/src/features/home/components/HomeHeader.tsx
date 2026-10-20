@@ -1,6 +1,7 @@
 import { Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import type { HomeTab } from '../home.types';
+import { AppIcon } from '../../../components/ui/AppIcon/AppIcon';
 import './HomeHeader.scss';
 
 const copy: Record<HomeTab, { title: string; subtitle: string }> = {
@@ -29,7 +30,7 @@ export function HomeHeader({ activeTab }: { activeTab: HomeTab }) {
           aria-label="查看消息"
           onClick={() => void Taro.navigateTo({ url: '/pages/messages/index' })}
         >
-          <Text>消息</Text>
+          <AppIcon name="bell" />
         </View>
       </View>
     </View>

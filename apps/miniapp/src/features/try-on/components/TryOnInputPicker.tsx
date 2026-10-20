@@ -2,6 +2,8 @@ import { Picker, Text, View } from '@tarojs/components';
 import type { TryOnSnapshot, TryOnWorkflow } from '../try-on-workflow';
 import { isActiveJob } from '../try-on-workflow';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
+import { PrivateMediaImage } from '../../media/components/PrivateMediaImage';
+import { AppIcon } from '../../../components/ui/AppIcon/AppIcon';
 
 export function TryOnInputPicker({ state, workflow }: { state: TryOnSnapshot; workflow: TryOnWorkflow }) {
   const locked = state.busy || !!state.pendingInput || isActiveJob(state.job);
@@ -16,8 +18,11 @@ export function TryOnInputPicker({ state, workflow }: { state: TryOnSnapshot; wo
   const clothingIndex = state.clothing.findIndex((c) => c.id === state.clothingId) + 1;
   const version = profiles[profileIndex - 1]?.version;
   return (
-    <View className="profile-form">
-      <Text className="profile-section-title">确认生成输入</Text>
+    <View className="try-on-inputs">
+      <View className="try-on-step">
+        <Text className="try-on-step-number">1</Text>
+        <Text>选择人物版本</Text>
+      </View>
       <Picker
         disabled={locked}
         mode="selector"
@@ -28,8 +33,18 @@ export function TryOnInputPicker({ state, workflow }: { state: TryOnSnapshot; wo
           if (option) workflow.selectProfile(option.id);
         }}
       >
-        <View className="profile-input">{profiles[profileIndex - 1]?.name ?? '请选择人物版本'}</View>
+        <View className="try-on-person">
+          <AppIcon name="user-round" active />
+          <View className="try-on-person-copy">
+            <Text>{profiles[profileIndex - 1]?.name ?? '选择人物档案'}</Text>
+            <Text className="section-caption">照片与参数仅用于本次试穿</Text>
+          </View>
+          <AppIcon name="chevron-right" />
+        </View>
       </Picker>
+      {version?.sourceAssetId && (
+        <PrivateMediaImage assetId={version.sourceAssetId} className="try-on-person-image" mode="aspectFit" />
+      )}
       {version && (
         <Text className="profile-hint">
           身高 {version.measurements.heightCm ?? '未填'} cm · 体重 {version.measurements.weightKg ?? '未填'}{' '}
@@ -42,21 +57,35 @@ export function TryOnInputPicker({ state, workflow }: { state: TryOnSnapshot; wo
           更多人物档案
         </AppButton>
       )}
-      <Picker
-        disabled={locked}
-        mode="selector"
-        range={[
-          '请选择单件衣物',
-          ...state.clothing.map((c) => c.name + ' · ' + c.category + (c.assetId ? '' : '（缺少图片）')),
-        ]}
-        value={clothingIndex}
-        onChange={(event) => {
-          const item = state.clothing[Number(event.detail.value) - 1];
-          if (item) workflow.selectClothing(item.id);
-        }}
-      >
-        <View className="profile-input">{state.clothing[clothingIndex - 1]?.name ?? '请选择单件衣物'}</View>
-      </Picker>
+      <View className="try-on-step">
+        <Text className="try-on-step-number">2</Text>
+        <Text>选择一件衣物</Text>
+        <Text className="section-caption">{clothingIndex > 0 ? '已选 1 件' : '尚未选择'}</Text>
+      </View>
+      <View className="try-on-clothing-grid">
+        {state.clothing.map((item) => (
+          <View key={item.id} className={`try-on-clothing ${state.clothingId === item.id ? 'is-selected' : ''}`}>
+            {item.assetId ? (
+              <PrivateMediaImage assetId={item.assetId} className="try-on-clothing-image" mode="aspectFit" />
+            ) : (
+              <View className="try-on-clothing-image try-on-clothing-missing">
+                <AppIcon name="shirt" />
+                <Text>待补充图片</Text>
+              </View>
+            )}
+            <Text className="try-on-clothing-name">{item.name}</Text>
+            <AppButton
+              block
+              compact
+              variant={state.clothingId === item.id ? 'primary' : 'secondary'}
+              disabled={locked || !item.assetId}
+              onClick={() => workflow.selectClothing(item.id)}
+            >
+              {state.clothingId === item.id ? '已选择' : '选这件'}
+            </AppButton>
+          </View>
+        ))}
+      </View>
       {!state.clothing.length && <Text className="profile-hint">还没有衣橱单品，请先上传一件衣物图片。</Text>}
       {state.clothingCursor && (
         <AppButton compact variant="secondary" disabled={locked} onClick={() => void workflow.more('clothing')}>

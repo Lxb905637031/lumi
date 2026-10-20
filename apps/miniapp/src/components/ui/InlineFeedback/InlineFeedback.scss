@@ -2,7 +2,7 @@
   margin-top: 20px;
   padding: 18px 20px;
   border: 1px solid var(--lumi-color-line);
-  border-radius: 10px;
+  border-radius: var(--lumi-radius-control);
   font-size: 24px;
   line-height: 1.5;
   text-align: left;
@@ -14,13 +14,13 @@
 }
 
 .inline-feedback--success {
-  border-color: #cfe0d2;
-  background: #eff6ef;
+  border-color: var(--lumi-color-line);
+  background: var(--lumi-color-success-soft);
   color: var(--lumi-color-success);
 }
 
 .inline-feedback--error {
-  border-color: #ead0c8;
-  background: #fff3f0;
+  border-color: var(--lumi-color-error-line);
+  background: var(--lumi-color-error-soft);
   color: var(--lumi-color-error);
 }

@@ -11,6 +11,7 @@ import { PrivateMediaImage } from '../../media/components/PrivateMediaImage';
 import { uploadImage } from '../../media/media.api';
 import { createClothingItem, deleteClothingItem, listClothingPage, updateClothingItem } from '../wardrobe.api';
 import './WardrobeManager.scss';
+import '../../profile/components/ProfilePanel.scss';
 
 type ClothingCategory = ClothingItem['category'];
 type CategoryFilter = 'ALL' | ClothingCategory;
@@ -222,7 +223,7 @@ export function WardrobeManager() {
           </View>
           <Text className="wardrobe-privacy-note">私有照片不会公开。保存衣物不会启动生成，也不消耗试穿次数。</Text>
           {error && <InlineFeedback message={error} tone="error" />}
-          <AppButton loading={busy} onClick={() => void save()}>
+          <AppButton block loading={busy} onClick={() => void save()}>
             {isEditing ? '保存单品修改' : '保存到我的衣橱'}
           </AppButton>
         </View>
@@ -247,6 +248,8 @@ export function WardrobeManager() {
         loading={list.loading}
         error={list.error}
         empty={!list.items.length}
+        emptyTitle="把第一件衣物放进衣橱"
+        emptyDescription="拍摄或选择一张清晰照片，保存后可以反复用于试穿。"
         onRetry={() => void list.reload()}
       />
       {!list.loading && !list.error && list.items.length > 0 && visibleItems.length === 0 && (
@@ -258,7 +261,7 @@ export function WardrobeManager() {
         {visibleItems.map((item) => (
           <View className="wardrobe-item" key={item.id}>
             {item.assetId ? (
-              <PrivateMediaImage assetId={item.assetId} className="wardrobe-item-image" mode="aspectFill" />
+              <PrivateMediaImage assetId={item.assetId} className="wardrobe-item-image" mode="aspectFit" />
             ) : (
               <View className="wardrobe-item-image wardrobe-item-image--missing">
                 <Text>尚未上传照片</Text>

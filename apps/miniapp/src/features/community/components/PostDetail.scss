@@ -1,0 +1,29 @@
+.post-detail-gallery {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.post-detail-image {
+  display: block;
+  width: 100%;
+  border-radius: var(--lumi-radius-media);
+  background: var(--lumi-color-surface-muted);
+}
+.post-detail > .feed-card-body {
+  margin: 24px 0;
+  font-size: 28px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.post-detail > .feed-card-actions {
+  padding: 20px 0;
+}
+.post-detail > .feed-input {
+  margin: 20px 0;
+}
+.post-detail-comment {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--lumi-color-line);
+  overflow-wrap: anywhere;
+}

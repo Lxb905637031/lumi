@@ -3,18 +3,19 @@
   align-items: center;
   justify-content: center;
   width: auto;
-  min-width: 176px;
+  min-width: 0;
+  max-width: 100%;
   min-height: 88px;
   margin: 0;
-  padding: 0 28px;
+  padding: 20px 28px;
   border: 0;
   border-radius: var(--lumi-radius-control);
   font-size: 26px;
   font-weight: 600;
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
 }
 
 .lumi-button::after {
@@ -27,8 +28,8 @@
 }
 
 .lumi-button--primary[disabled] {
-  background: #cbd4ca;
-  color: #718071;
+  background: var(--lumi-color-disabled);
+  color: var(--lumi-color-disabled-ink);
 }
 
 .lumi-button--block {
@@ -37,8 +38,8 @@
 
 .lumi-button--compact {
   min-width: 0;
-  min-height: 72px;
-  padding: 0 20px;
+  min-height: 88px;
+  padding: 14px 20px;
   font-size: 23px;
 }
 
@@ -48,7 +49,15 @@
   color: var(--lumi-color-ink);
 }
 
-.lumi-button--secondary:active,
-.lumi-button--primary:active {
-  opacity: 0.82;
+.lumi-button--secondary[disabled] {
+  color: var(--lumi-color-disabled-ink);
+  background: var(--lumi-color-surface-muted);
+}
+
+.lumi-button--secondary:active {
+  background: var(--lumi-color-surface-muted);
+}
+
+.lumi-button--primary:active:not([disabled]) {
+  background: var(--lumi-color-brand-pressed);
 }

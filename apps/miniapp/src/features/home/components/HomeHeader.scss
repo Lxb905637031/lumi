@@ -1,5 +1,5 @@
 .home-header {
-  padding: 8px 0 26px;
+  padding: 4px 0 20px;
 }
 
 .home-header-brand,
@@ -16,26 +16,27 @@
 
 .home-wordmark {
   color: var(--lumi-color-ink);
-  font-size: 30px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -1px;
 }
 
 .home-brand-divider,
 .home-brand-label {
   color: var(--lumi-color-muted);
-  font-size: 22px;
+  font-size: 20px;
 }
 
 .home-header-content {
-  align-items: flex-end;
+  align-items: center;
   gap: 14px;
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .home-title {
   display: block;
   max-width: 520px;
-  font-size: 42px;
+  font-size: 44px;
   color: var(--lumi-color-ink);
   font-weight: 600;
   line-height: 1.25;
@@ -54,11 +55,10 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  min-width: 84px;
-  min-height: 84px;
-  border: 1px solid var(--lumi-color-line);
-  border-radius: 10px;
-  background: var(--lumi-color-surface);
+  min-width: 88px;
+  min-height: 88px;
+  border-radius: var(--lumi-radius-control);
+  background: transparent;
   color: var(--lumi-color-ink);
   font-size: 22px;
 }

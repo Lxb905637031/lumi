@@ -16,7 +16,25 @@
 
 .profile-login,
 .profile-menu-list {
-  padding: 24px;
+  padding: 24px 0;
+  border: 0;
+  background: transparent;
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--lumi-color-line);
+}
+.profile-identity > .lumi-icon {
+  width: 72px;
+  height: 72px;
+  flex-basis: 72px;
+  padding: 14px;
+  border-radius: 50%;
+  background: var(--lumi-color-brand-soft);
 }
 
 .profile-login .lumi-button {
@@ -25,7 +43,7 @@
 
 .profile-menu-row {
   display: flex;
-  min-height: 98px;
+  min-height: 88px;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
@@ -40,12 +58,15 @@
 .profile-menu-copy {
   display: grid;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .profile-menu-action {
   flex: 0 0 auto;
   color: var(--lumi-color-brand);
-  font-size: 22px;
+  font-size: 26px;
+  line-height: 1;
   font-weight: 600;
 }
 
@@ -64,14 +85,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .profile-section {
   margin-top: 24px;
-  padding: 24px;
-  border: 1px solid var(--lumi-color-line);
-  border-radius: var(--lumi-radius-media);
-  background: var(--lumi-color-surface);
+  padding: 24px 0;
+  border-top: 1px solid var(--lumi-color-line);
 }
 
 .profile-section-title,
@@ -119,24 +139,28 @@
   color: var(--lumi-color-ink);
   font-size: 27px;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .profile-record-actions {
   display: flex;
   flex: 0 0 auto;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .profile-record-actions .lumi-button,
 .profile-record > .lumi-button {
   width: auto;
   min-width: 132px;
-  min-height: 68px;
+  min-height: 88px;
   padding: 0 18px;
   font-size: 22px;
 }
 
 .profile-form {
+  display: grid;
+  gap: 20px;
   margin-top: 26px;
   padding-top: 26px;
   border-top: 1px solid var(--lumi-color-line);
@@ -150,7 +174,7 @@
 .profile-input {
   box-sizing: border-box;
   width: 100%;
-  min-height: 82px;
+  min-height: 88px;
   padding: 18px;
   border: 1px solid var(--lumi-color-line);
   border-radius: var(--lumi-radius-control);
@@ -173,10 +197,10 @@
 .profile-person-preview,
 .profile-job-preview {
   display: block;
-  width: 160px;
-  height: 160px;
+  width: 100%;
+  height: 560px;
   margin-top: 16px;
-  border-radius: 10px;
+  border-radius: var(--lumi-radius-media);
   background: var(--lumi-color-surface-muted);
 }
 
@@ -228,7 +252,10 @@
   display: grid;
   gap: 12px;
   margin-top: 18px;
-  padding: 18px;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid var(--lumi-color-line);
+  background: transparent;
 }
 
 .generation-result-title {
@@ -242,4 +269,11 @@
   display: grid;
   gap: 10px;
   margin-top: 4px;
+}
+
+.profile-form .lumi-button + .lumi-button,
+.profile-record-actions .lumi-button + .lumi-button,
+.profile-actions .lumi-button + .lumi-button,
+.generation-result-actions .lumi-button + .lumi-button {
+  margin-top: 0;
 }
