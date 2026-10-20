@@ -30,7 +30,6 @@ function QueueContent() {
   const [items, setItems] = useState<ModerationQueueItem[]>([]);
   const [status, setStatus] = useState<ModerationStatus>('PENDING');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [cursor, setCursor] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [updatingId, setUpdatingId] = useState<string>();
@@ -42,7 +41,6 @@ function QueueContent() {
       try {
         const page = await listModerationPosts(status, next);
         setItems((current) => (append ? [...current, ...page.items] : page.items));
-        setCursor(next);
         setNextCursor(page.nextCursor ?? null);
       } catch (reason: unknown) {
         setError(reason instanceof Error ? reason.message : '审核队列加载失败');
@@ -64,7 +62,7 @@ function QueueContent() {
     setError(undefined);
     try {
       const updated = await updateModerationStatus(id, nextStatus, reason);
-      setItems((current) => current.map((item) => (item.id === id ? updated : item)));
+      setItems((current) => current.filter((item) => item.id !== updated.id));
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : '审核操作失败');
     } finally {
@@ -95,7 +93,8 @@ function QueueContent() {
           <span className="text-sm text-lumi-muted">{loading ? '加载中' : `${items.length} 条`}</span>
           <button
             className="rounded-md border border-lumi-line px-3 py-2 text-xs font-medium"
-            onClick={() => void load(cursor)}
+            disabled={loading}
+            onClick={() => void load()}
           >
             刷新
           </button>
