@@ -265,7 +265,29 @@ export type NotificationDestination =
   | { kind: 'POST'; id: string; commentId: string | null; notice: string | null }
   | { kind: 'GENERATION_JOB'; id: string }
   | { kind: 'FOLLOWERS' }
+  | { kind: 'ANNOUNCEMENT'; title: string; body: string }
   | { kind: 'UNAVAILABLE'; message: string };
+
+export type AnnouncementStatus = 'DRAFT' | 'SENDING' | 'SENT';
+
+export type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  status: AnnouncementStatus;
+  version: number;
+  recipientCount: number | null;
+  deliveredCount: number;
+  createdAt: string;
+  publishedAt: string | null;
+  sentAt: string | null;
+};
+
+export type CreateAnnouncementInput = { idempotencyKey: string; title: string; body: string };
+
+export type UpdateAnnouncementInput = { expectedVersion: number; title: string; body: string };
+
+export type PublishAnnouncementInput = { expectedVersion: number };
 
 export type GenerationJob = {
   id: string;

@@ -17,6 +17,7 @@
     "test:publishing-client": "node --env-file-if-exists=../../.env --import tsx tests/publishing-client.integration.mjs",
     "test:follows": "node --env-file-if-exists=../../.env tests/follows-integration.mjs",
     "test:interaction-notifications": "node --env-file-if-exists=../../.env --import tsx tests/interaction-notifications.integration.mjs",
+    "test:announcements": "node --env-file-if-exists=../../.env tests/announcements.integration.mjs",
     "test:account-privacy": "node --env-file-if-exists=../../.env tests/account-privacy-integration.mjs",
     "storage:init-local": "node --env-file-if-exists=../../.env scripts/init-local-storage.mjs",
     "db:generate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js generate --schema prisma/schema.prisma",

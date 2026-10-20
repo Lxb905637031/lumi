@@ -1,4 +1,11 @@
-import type { CursorPage, ModerationQueueItem, ModerationStatus, ReportQueueItem, ReportStatus } from '@lumi/contracts';
+import type {
+  Announcement,
+  CursorPage,
+  ModerationQueueItem,
+  ModerationStatus,
+  ReportQueueItem,
+  ReportStatus,
+} from '@lumi/contracts';
 import { adminRequest, apiUrl } from './admin-session';
 
 export const moderationApiConfig = {
@@ -79,4 +86,30 @@ export type AdminOverview = {
 
 export function getAdminOverview(): Promise<AdminOverview> {
   return adminRequest('/admin/overview');
+}
+
+export function listAnnouncements(): Promise<CursorPage<Announcement>> {
+  return adminRequest('/admin/announcements?limit=20');
+}
+
+export function createAnnouncement(input: {
+  idempotencyKey: string;
+  title: string;
+  body: string;
+}): Promise<Announcement> {
+  return adminRequest('/admin/announcements', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function updateAnnouncement(
+  id: string,
+  input: { expectedVersion: number; title: string; body: string },
+): Promise<Announcement> {
+  return adminRequest(`/admin/announcements/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export function publishAnnouncement(id: string, expectedVersion: number): Promise<Announcement> {
+  return adminRequest(`/admin/announcements/${id}/publish`, {
+    method: 'POST',
+    body: JSON.stringify({ expectedVersion }),
+  });
 }

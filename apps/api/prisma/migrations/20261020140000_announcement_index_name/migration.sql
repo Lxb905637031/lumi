@@ -1,0 +1,2 @@
+ALTER INDEX "announcement_recipients_announcement_id_delivered_at_user_id_idx"
+  RENAME TO "announcement_recipients_announcement_id_delivered_at_user_i_idx";

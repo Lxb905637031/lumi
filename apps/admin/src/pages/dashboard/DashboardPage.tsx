@@ -5,6 +5,7 @@ import { CommentReviewQueue } from '../../features/moderation/CommentReviewQueue
 import { ReportReviewQueue } from '../../features/moderation/ReportReviewQueue';
 import { getAdminOverview, type AdminOverview } from '../../services/moderation-api';
 import { logoutAdmin } from '../../services/admin-session';
+import { AnnouncementComposer } from '../../features/announcements/AnnouncementComposer';
 import { useEffect, useState } from 'react';
 
 export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
@@ -36,6 +37,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
       <ReviewQueue />
       <CommentReviewQueue />
       <ReportReviewQueue />
+      <AnnouncementComposer />
     </AdminShell>
   );
 }

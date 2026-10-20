@@ -69,6 +69,13 @@ export class NotificationsService {
       if (job) return { kind: 'GENERATION_JOB', id: job.id };
     }
     if (item.targetType === 'USER' && item.type === 'FOLLOW') return { kind: 'FOLLOWERS' };
+    if (item.targetType === 'ANNOUNCEMENT' && item.targetId && item.type === 'SYSTEM') {
+      const announcement = await this.prisma.announcement.findFirst({
+        where: { id: item.targetId, status: { in: ['SENDING', 'SENT'] } },
+        select: { title: true, body: true },
+      });
+      if (announcement) return { kind: 'ANNOUNCEMENT', ...announcement };
+    }
     return {
       kind: 'UNAVAILABLE',
       message: item.targetType === 'REPORT' ? '举报处理结果已在这条消息中展示。' : '消息对应的内容暂不可查看。',

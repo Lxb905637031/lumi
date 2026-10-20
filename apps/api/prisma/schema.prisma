@@ -59,6 +59,12 @@ enum NotificationType {
   INTERACTION
 }
 
+enum AnnouncementStatus {
+  DRAFT
+  SENDING
+  SENT
+}
+
 enum ReportStatus {
   OPEN
   RESOLVED
@@ -114,6 +120,8 @@ model User {
   followers               Follow[]                  @relation("Following")
   accountDeletion          AccountDeletionRequest?
   dataExports              DataExportRequest[]
+  announcements            Announcement[]           @relation("AnnouncementAuthor")
+  announcementRecipients   AnnouncementRecipient[]
 
   @@map("users")
 }
@@ -173,9 +181,9 @@ model DataExportRequest {
   userId      String           @map("user_id")
   status      DataExportStatus @default(REQUESTED)
   requestedAt DateTime         @default(now()) @map("requested_at")
-  processingAt DateTime?       @map("processing_at")
-  readyAt     DateTime?        @map("ready_at")
-  expiresAt   DateTime?        @map("expires_at")
+  processingAt DateTime?        @map("processing_at")
+  readyAt      DateTime?        @map("ready_at")
+  expiresAt    DateTime?        @map("expires_at")
   failureCode String?          @map("failure_code")
   payload     Json?
   createdAt   DateTime         @default(now()) @map("created_at")
@@ -528,6 +536,41 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")
+}
+
+model Announcement {
+  id             String             @id @default(cuid())
+  authorId       String?            @map("author_id")
+  idempotencyKey String             @map("idempotency_key")
+  title          String
+  body           String
+  status         AnnouncementStatus @default(DRAFT)
+  version        Int                     @default(1)
+  recipientCount Int?               @map("recipient_count")
+  publishedAt    DateTime?               @map("published_at")
+  sentAt         DateTime?               @map("sent_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  author         User?              @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  recipients     AnnouncementRecipient[]
+
+  @@unique([authorId, idempotencyKey])
+  @@index([status, publishedAt, id])
+  @@index([createdAt, id])
+  @@map("announcements")
+}
+
+model AnnouncementRecipient {
+  announcementId String       @map("announcement_id")
+  userId         String       @map("user_id")
+  deliveredAt    DateTime?    @map("delivered_at")
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
+  @@index([announcementId, deliveredAt, userId])
+  @@index([userId, announcementId])
+  @@map("announcement_recipients")
 }
 
 model Follow {

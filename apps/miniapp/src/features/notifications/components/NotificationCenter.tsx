@@ -61,6 +61,10 @@ export function NotificationCenter() {
         await Taro.showModal({ title: '消息详情', content: destination.message, showCancel: false });
         return;
       }
+      if (destination.kind === 'ANNOUNCEMENT') {
+        await Taro.showModal({ title: destination.title, content: destination.body, showCancel: false });
+        return;
+      }
       if (destination.kind === 'POST' && destination.notice) {
         await Taro.showModal({ title: '评论状态已更新', content: destination.notice, showCancel: false });
       }

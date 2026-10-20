@@ -8,6 +8,8 @@ export function notificationUrl(destination: NotificationDestination): string | 
       return `/pages/generations/index?id=${encodeURIComponent(destination.id)}`;
     case 'FOLLOWERS':
       return '/pages/follows/index?mode=followers';
+    case 'ANNOUNCEMENT':
+      return null;
     case 'UNAVAILABLE':
       return null;
   }
