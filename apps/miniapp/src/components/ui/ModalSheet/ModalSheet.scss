@@ -1,0 +1,53 @@
+.lumi-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(18 16 17 / 42%);
+}
+
+.lumi-sheet__panel {
+  width: 100%;
+  max-height: 82vh;
+  overflow: hidden;
+  background: #fffaf8;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -12px 32px rgb(42 21 29 / 16%);
+}
+
+.lumi-sheet__header,
+.lumi-sheet__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.lumi-sheet__header {
+  border-bottom: 1px solid #eadfe0;
+}
+
+.lumi-sheet__title {
+  color: #2a2023;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.lumi-sheet__close {
+  min-width: 32px;
+  color: #755d65;
+  font-size: 26px;
+  line-height: 32px;
+  text-align: center;
+}
+
+.lumi-sheet__body {
+  max-height: 58vh;
+  box-sizing: border-box;
+  padding: 18px 20px;
+}
+
+.lumi-sheet__footer {
+  border-top: 1px solid #eadfe0;
+}
