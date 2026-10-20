@@ -10,6 +10,7 @@ import {
 import { PrismaClient } from '@prisma/client';
 import sharp from 'sharp';
 import { databaseTarget } from '../scripts/migration-tools.mjs';
+import { normalizeEnvelope } from './api-envelope.mjs';
 
 const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4301/api/v1';
 const loopback = ['127.0.0.1', 'localhost', '[::1]'];
@@ -44,7 +45,7 @@ async function request(path, status = 200, init = {}) {
   });
   const data = await response.json();
   assert.equal(response.status, status, `${path}: ${JSON.stringify(data)}`);
-  return data;
+  return normalizeEnvelope(data);
 }
 
 const json = (method, headers, body) => ({ method, headers, body: JSON.stringify(body) });
@@ -132,7 +133,7 @@ try {
       return { status: response.status, data: await response.json() };
     }),
   );
-  const asset = responses.find((response) => response.status === 201)?.data;
+  const asset = normalizeEnvelope(responses.find((response) => response.status === 201)?.data);
   assert.ok(asset, 'At least one concurrent finalization must succeed');
   assert.equal(asset.status, 'READY');
   assert.equal(asset.storageDriver, 's3');
