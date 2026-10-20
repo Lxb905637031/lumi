@@ -62,7 +62,16 @@ const rules = (items) =>
   `<div class="rule-list">${items.map((text) => `<div class="rule">${icon('check')}<span>${text}</span></div>`).join('')}</div>`;
 const summary = () =>
   `<div class="asset-summary"><div><strong>24</strong><span>我的衣物</span></div><div><strong>08</strong><span>保存的搭配</span></div><div><strong>03</strong><span>可用试穿次数</span></div></div>`;
-function discovery(t) {
+function discovery(t, empty = false) {
+  if (empty) {
+    const emptyCopy =
+      t === 'a'
+        ? ['这里还没有穿搭灵感', '社区内容通过审核后会出现在这里。先从你自己的衣橱开始。']
+        : t === 'c'
+          ? ['留一点空间，给下一套搭配', '公开穿搭还没有准备好。你可以先整理衣橱，或继续上次的试穿。']
+          : ['发现，先从自己的衣橱开始', '暂时没有可浏览的公开穿搭。衣橱里的单品仍可用于搭配和试穿。'];
+    return `${heading('发现', '公开穿搭灵感')}${chips(['为你推荐', '通勤', '周末', '基础款'])}<div class="feed-empty"><span class="feed-empty-index">${t === 'c' ? 'L / 01' : 'LUMI / DISCOVER'}</span><div class="feed-empty-copy"><h2>${emptyCopy[0]}</h2><p>${emptyCopy[1]}</p></div>${sh('从自己的衣橱开始', '全部单品')}<div class="wardrobe-tease">${product('shirt', '浅蓝衬衫')}${product('denim', '直筒牛仔裤')}${product('tee', '白色 T 恤')}</div><div class="feed-empty-actions">${btn('查看我的衣橱', 'secondary', 3)}${btn('开始一次试穿', '', 2)}</div><div class="feed-empty-foot">公开内容会在审核通过后出现 · 私人人物资料不会公开</div></div>`;
+  }
   if (t === 'a')
     return `${heading('发现穿搭', '从日常穿着里，找到新想法', icon('search'))}${chips(['为你推荐', '通勤', '周末', '基础款'])}${feed()}`;
   if (t === 'c')
@@ -84,8 +93,8 @@ const screens = [
     title: '发现',
     group: 1,
     tab: '发现',
-    body: discovery,
-    note: '图片、衣橱和继续入口的三种层级方案；示例内容。',
+    body: (t) => discovery(t, params.get('state') === 'empty'),
+    note: params.get('state') === 'empty' ? '公开内容为空的完整状态；提供衣橱和试穿两个真实下一步。' : '图片、衣橱和继续入口的三种层级方案；示例内容。',
   },
   {
     id: 2,
@@ -367,7 +376,7 @@ function phone(s, t = theme) {
   return `<div class="phone"><div class="statusbar"><span>9:41</span><span class="device-signal">5G ${icon('circle')}<span>100%</span></span></div><div class="native-nav">${s.tab ? '<span class="native-brand">lumi</span>' : `<button class="icon-btn" data-go="1" aria-label="返回首页">${icon('chevron-left')}</button><span class="native-title">${s.title}</span>`}<div class="wx-capsule">${icon('ellipsis')}<span class="divider"></span>${icon('circle')}</div></div><div class="phone-body">${s.body(t)}</div>${s.bottom ? `<div class="phone-bottom">${s.bottom()}</div>` : ''}${s.tab ? tabs(s.tab) : '<div class="phone-safe"></div>'}${s.overlay ? s.overlay() : ''}</div>`;
 }
 const screenCard = (s, t = theme) =>
-  `<article class="screen-card theme-${t}" data-screen="${s.id}"><div class="screen-label"><h3>${String(s.id).padStart(2, '0')} / ${s.title}</h3><button data-zoom="${s.id}">放大查看 ↗</button></div>${phone(s, t)}<p class="screen-note">${s.note}</p></article>`;
+  `<article class="screen-card theme-${t}" data-screen="${s.id}"><div class="screen-label"><h3>${String(s.id).padStart(2, '0')} / ${s.title}</h3><div class="screen-actions">${s.id === 1 ? `<a class="state-link" href="?theme=${t}&screen=1&state=${params.get('state') === 'empty' ? 'content' : 'empty'}&rev=4">${params.get('state') === 'empty' ? '查看有内容' : '查看 Feed 空态'}</a>` : ''}<button data-zoom="${s.id}">放大查看 ↗</button></div></div>${phone(s, t)}<p class="screen-note">${s.note}</p></article>`;
 
 const adminTitles = [
   '后台登录',
