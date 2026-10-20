@@ -7,6 +7,7 @@ import { getAdminOverview, type AdminOverview } from '../../services/moderation-
 import { logoutAdmin } from '../../services/admin-session';
 import { AnnouncementComposer } from '../../features/announcements/AnnouncementComposer';
 import { UserModerationPanel } from '../../features/users/UserModerationPanel';
+import { MediaReviewQueue } from '../../features/moderation/MediaReviewQueue';
 import { useEffect, useState } from 'react';
 
 export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
@@ -37,6 +38,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
       </section>
       <ReviewQueue />
       <CommentReviewQueue />
+      <MediaReviewQueue />
       <ReportReviewQueue />
       <AnnouncementComposer />
       <UserModerationPanel />

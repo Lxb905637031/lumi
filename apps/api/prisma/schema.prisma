@@ -80,6 +80,12 @@ enum MediaStatus {
   DELETED
 }
 
+enum MediaReviewStatus {
+  UNREVIEWED
+  APPROVED
+  REJECTED
+}
+
 enum QuotaReservationStatus {
   RESERVED
   CONSUMED
@@ -110,6 +116,7 @@ model User {
   moderationActions        ModerationAction[]        @relation("ModerationActor")
   userModerationActions    UserModerationAction[]   @relation("UserModerationSubject")
   performedUserActions      UserModerationAction[]   @relation("UserModerationActor")
+  mediaReviewActions        MediaReviewAction[]      @relation("MediaReviewActor")
   likes                    PostLike[]
   bookmarks                PostBookmark[]
   reports                  PostReport[]
@@ -263,6 +270,10 @@ model MediaAsset {
   objectKey           String             @unique @map("object_key")
   storageDriver       String             @default("local") @map("storage_driver")
   status              MediaStatus        @default(READY)
+  reviewStatus        MediaReviewStatus  @default(UNREVIEWED) @map("review_status")
+  reviewReason        String?            @map("review_reason")
+  reviewedAt          DateTime?          @map("reviewed_at")
+  reviewedById        String?            @map("reviewed_by_id")
   stagingObjectKey    String?            @unique @map("staging_object_key")
   uploadRequestKey    String?            @map("upload_request_key")
   uploadMimeType      String?            @map("upload_mime_type")
@@ -279,13 +290,32 @@ model MediaAsset {
   previewData         String?            @map("preview_data") @db.Text
   deletedAt           DateTime?          @map("deleted_at")
   createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
   owner               User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   generationOutputs   GenerationOutput[]
+  reviewActions       MediaReviewAction[]
 
   @@unique([ownerId, uploadRequestKey])
   @@index([ownerId, createdAt])
   @@index([status, uploadExpiresAt])
+  @@index([reviewStatus, createdAt])
   @@map("media_assets")
+}
+
+model MediaReviewAction {
+  id         String           @id @default(cuid())
+  assetId    String           @map("asset_id")
+  actorId    String           @map("actor_id")
+  fromStatus MediaReviewStatus @map("from_status")
+  toStatus   MediaReviewStatus @map("to_status")
+  reason     String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  asset      MediaAsset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  actor      User             @relation("MediaReviewActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([assetId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("media_review_actions")
 }
 
 model ObjectCleanup {

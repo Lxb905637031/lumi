@@ -83,6 +83,24 @@ export type AdminUser = {
   reportCount: number;
 };
 
+export type AdminMediaAsset = {
+  id: string;
+  ownerId: string;
+  kind: 'PROFILE' | 'CLOTHING' | 'GENERATION_OUTPUT' | 'UPLOAD';
+  status: 'PENDING' | 'PROCESSING' | 'READY' | 'REJECTED' | 'EXPIRED' | 'DELETED';
+  reviewStatus: 'UNREVIEWED' | 'APPROVED' | 'REJECTED';
+  reviewReason: string | null;
+  reviewedAt: string | null;
+  reviewedById: string | null;
+  mimeType: string;
+  byteSize: number;
+  width: number | null;
+  height: number | null;
+  url: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export const moderationStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'REMOVED'] as const;
 export type ModerationStatus = (typeof moderationStatuses)[number];
 

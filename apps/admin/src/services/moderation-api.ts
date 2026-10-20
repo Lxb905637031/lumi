@@ -6,6 +6,7 @@ import type {
   ModerationStatus,
   ReportQueueItem,
   ReportStatus,
+  AdminMediaAsset,
 } from '@lumi/contracts';
 import { adminRequest, apiUrl } from './admin-session';
 
@@ -74,6 +75,28 @@ export function updateReportStatus(id: string, status: Exclude<ReportStatus, 'OP
   return adminRequest<ReportQueueItem>(`/admin/moderation/reports/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status, reason: reason.trim() }),
+  });
+}
+
+export type MediaReviewStatus = 'UNREVIEWED' | 'APPROVED' | 'REJECTED';
+export type MediaReviewKind = 'PROFILE' | 'CLOTHING' | 'GENERATION_OUTPUT' | 'UPLOAD';
+
+export function listMediaModeration(status: MediaReviewStatus = 'UNREVIEWED', kind?: MediaReviewKind, cursor?: string) {
+  const params = new URLSearchParams({ status, limit: '20' });
+  if (kind) params.set('kind', kind);
+  if (cursor) params.set('cursor', cursor);
+  return adminRequest<CursorPage<AdminMediaAsset>>(`/admin/moderation/media?${params.toString()}`);
+}
+
+export function updateMediaModerationStatus(
+  id: string,
+  status: Exclude<MediaReviewStatus, 'UNREVIEWED'>,
+  expectedUpdatedAt: string,
+  reason: string,
+) {
+  return adminRequest<AdminMediaAsset>(`/admin/moderation/media/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, expectedUpdatedAt, reason: reason.trim() || undefined }),
   });
 }
 

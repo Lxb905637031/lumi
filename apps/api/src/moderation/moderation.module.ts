@@ -8,10 +8,25 @@ import { CommentModerationController } from './comment-moderation.controller';
 import { CommentModerationService } from './comment-moderation.service';
 import { ReportModerationController } from './report-moderation.controller';
 import { ReportModerationService } from './report-moderation.service';
+import { MediaModule } from '../media/media.module';
+import { MediaModerationController } from './media-moderation.controller';
+import { MediaModerationService } from './media-moderation.service';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [ModerationController, CommentModerationController, ReportModerationController],
-  providers: [AuthGuard, RolesGuard, ModerationService, CommentModerationService, ReportModerationService],
+  imports: [PrismaModule, MediaModule],
+  controllers: [
+    ModerationController,
+    CommentModerationController,
+    ReportModerationController,
+    MediaModerationController,
+  ],
+  providers: [
+    AuthGuard,
+    RolesGuard,
+    ModerationService,
+    CommentModerationService,
+    ReportModerationService,
+    MediaModerationService,
+  ],
 })
 export class ModerationModule {}

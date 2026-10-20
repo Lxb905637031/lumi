@@ -271,6 +271,10 @@ export class MediaService {
     }
   }
 
+  async readForAdmin(asset: MediaAssetEntity): Promise<string | null> {
+    return this.readLocation(asset);
+  }
+
   private async toContract(asset: MediaAssetEntity) {
     const url = await this.readLocation(asset);
     return {

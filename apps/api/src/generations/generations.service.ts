@@ -85,7 +85,13 @@ export class GenerationsService {
 
       const assetIds = [profileVersion.sourceAssetId, clothingItem.assetId].filter((id): id is string => !!id);
       const assets = await tx.mediaAsset.findMany({
-        where: { id: { in: assetIds }, ownerId: userId, status: 'READY', deletedAt: null },
+        where: {
+          id: { in: assetIds },
+          ownerId: userId,
+          status: 'READY',
+          reviewStatus: { not: 'REJECTED' },
+          deletedAt: null,
+        },
         select: { id: true, sha256: true, mimeType: true, storageDriver: true, objectKey: true },
       });
       if (assets.length !== new Set(assetIds).size) throw new ConflictException('生成输入图片已不可用');
