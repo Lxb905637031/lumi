@@ -11,7 +11,6 @@ const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4300/api/v1';
 assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(new URL(baseUrl).hostname));
 const db = new PrismaClient();
 const users = [];
-const authoringUsers = [];
 const runId = randomUUID();
 let requests = 0;
 
