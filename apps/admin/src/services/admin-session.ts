@@ -28,6 +28,11 @@ export function saveAdminSession(session: AuthSession) {
   sessionStorage.setItem(REFRESH_KEY, session.refreshToken);
 }
 
+function withRequestId(message: string, envelope: ApiSuccess<unknown> | ApiError) {
+  const requestId = envelope.meta?.requestId;
+  return requestId ? `${message}（请求编号 ${requestId}）` : message;
+}
+
 export async function loginAdmin(username: string, password: string): Promise<AuthSession> {
   const response = await fetch(`${apiUrl()}/auth/admin/login`, {
     method: 'POST',
@@ -36,7 +41,7 @@ export async function loginAdmin(username: string, password: string): Promise<Au
   });
   const envelope = (await response.json()) as ApiSuccess<AuthSession> | ApiError;
   if (!response.ok || !envelope.success) {
-    throw new Error(envelope.message || '登录失败，请检查账号密码');
+    throw new Error(withRequestId(envelope.message || '登录失败，请检查账号密码', envelope));
   }
   const body = envelope.data;
   if (body.user.role !== 'ADMIN' && body.user.role !== 'MODERATOR') throw new Error('当前账号没有后台权限');
@@ -74,9 +79,10 @@ export async function adminRequest<T>(path: string, init?: RequestInit): Promise
   }
   const envelope = (await response.json()) as ApiSuccess<T> | ApiError;
   if (!response.ok) {
-    throw new Error(envelope.message || `后台请求失败（${response.status}）`);
+    throw new Error(withRequestId(envelope.message || `后台请求失败（${response.status}）`, envelope));
   }
-  if (!envelope.success) throw new Error(envelope.message || `后台请求失败（${response.status}）`);
+  if (!envelope.success)
+    throw new Error(withRequestId(envelope.message || `后台请求失败（${response.status}）`, envelope));
   return envelope.data;
 }
 
@@ -95,10 +101,17 @@ async function refreshAdminSession(): Promise<string> {
     });
     if (!refreshed.ok) {
       if ([400, 401, 403].includes(refreshed.status)) clearAdminSession();
-      throw new Error(refreshed.status >= 500 ? '登录服务暂时不可用，请重试' : '后台登录状态已失效');
+      const failed = (await refreshed.json().catch(() => ({}))) as Partial<ApiError>;
+      throw new Error(
+        withRequestId(
+          refreshed.status >= 500 ? '登录服务暂时不可用，请重试' : '后台登录状态已失效',
+          failed as ApiError,
+        ),
+      );
     }
     const envelope = (await refreshed.json()) as ApiSuccess<AuthSession> | ApiError;
-    if (!refreshed.ok || !envelope.success) throw new Error(envelope.message || '后台登录状态已失效');
+    if (!refreshed.ok || !envelope.success)
+      throw new Error(withRequestId(envelope.message || '后台登录状态已失效', envelope));
     const session = envelope.data;
     if (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR') {
       clearAdminSession();

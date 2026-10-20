@@ -50,12 +50,18 @@ async function requestOnce<T>(path: string, options: Omit<Taro.request.Option, '
   });
 }
 
-function readError(body: ApiError | unknown, statusCode: number): ApiRequestError {
+function readError(body: ApiError | unknown, statusCode: number, headerRequestId?: string): ApiRequestError {
   const error = body as Partial<ApiError>;
   const message = Array.isArray(error.message)
     ? error.message.join('；')
     : error.message || `请求失败（${statusCode}）`;
-  return new ApiRequestError(message, statusCode, error.code);
+  return new ApiRequestError(message, statusCode, error.code, error.meta?.requestId ?? headerRequestId);
+}
+
+function responseRequestId(header?: Record<string, string | undefined>): string | undefined {
+  if (!header) return undefined;
+  const entry = Object.entries(header).find(([key]) => key.toLowerCase() === 'x-request-id');
+  return entry?.[1];
 }
 
 let refreshInFlight: Promise<string> | undefined;
@@ -68,7 +74,7 @@ async function refreshAccessToken(): Promise<string> {
       const body = response.data as ApiSuccess<AuthSession> | ApiError;
       if (response.statusCode >= 400 || !body.success) {
         if ([400, 401, 403].includes(response.statusCode)) clearSession();
-        throw readError(body, response.statusCode);
+        throw readError(body, response.statusCode, responseRequestId(response.header));
       }
       saveAccessToken(body.data.accessToken);
       saveRefreshToken(body.data.refreshToken);
@@ -90,9 +96,9 @@ export async function request<T>(path: string, options: Omit<Taro.request.Option
   }
 
   if (response.statusCode >= 400) {
-    throw readError(response.data, response.statusCode);
+    throw readError(response.data, response.statusCode, responseRequestId(response.header));
   }
   const body = response.data as ApiSuccess<T> | ApiError;
-  if (!body.success) throw readError(body, response.statusCode);
+  if (!body.success) throw readError(body, response.statusCode, responseRequestId(response.header));
   return body.data;
 }

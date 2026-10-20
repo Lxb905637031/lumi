@@ -3,8 +3,9 @@ export class ApiRequestError extends Error {
     message: string,
     readonly statusCode: number,
     readonly code?: string,
+    readonly requestId?: string,
   ) {
-    super(message);
+    super(requestId ? `${message}（请求编号 ${requestId}）` : message);
     this.name = 'ApiRequestError';
   }
 }

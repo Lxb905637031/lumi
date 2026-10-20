@@ -30,6 +30,8 @@ async function request(path, token, status = 200, method = 'GET', body) {
   });
   const data = await response.json();
   assert.equal(response.status, status, `${method} ${path}: ${JSON.stringify(data)}`);
+  assert.ok(data.meta?.requestId, `${method} ${path} response must expose a request ID`);
+  assert.equal(response.headers.get('x-request-id'), data.meta.requestId, 'Header and envelope IDs must match');
   return normalizeEnvelope(data);
 }
 
