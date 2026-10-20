@@ -47,19 +47,24 @@ export class CommunityController {
 
   @Get('posts')
   list(@Query() query: CommunityQueryDto) {
-    return this.community.list(query, query.topic);
+    return this.community.list(query, query.topic, undefined, undefined, query.search);
+  }
+
+  @Get('topics')
+  topics(@Query() query: CommunityQueryDto) {
+    return this.community.listTopics(query.search);
   }
 
   @Get('me/posts')
   @UseGuards(AuthGuard)
   mine(@CurrentUser() user: AuthenticatedUser, @Query() query: CommunityQueryDto) {
-    return this.community.list(query, query.topic, user.id);
+    return this.community.list(query, query.topic, user.id, undefined, query.search);
   }
 
   @Get('me/bookmarks')
   @UseGuards(AuthGuard)
   bookmarks(@CurrentUser() user: AuthenticatedUser, @Query() query: CommunityQueryDto) {
-    return this.community.list(query, query.topic, undefined, user.id);
+    return this.community.list(query, query.topic, undefined, user.id, query.search);
   }
 
   @Get('posts/:id/comments')

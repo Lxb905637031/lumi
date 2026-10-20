@@ -1,15 +1,27 @@
-import { Text, View } from '@tarojs/components';
+import { Input, ScrollView, Text, View } from '@tarojs/components';
+import { useCallback, useEffect, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceStatus';
 import { useCursorList } from '../../../hooks/useCursorList';
-import { listCommunityPosts } from '../../community/community.api';
+import { listCommunityPosts, listCommunityTopics } from '../../community/community.api';
 import { PostCard } from '../../community/components/PostCard';
 import { FeedEmptyState } from './FeedEmptyState';
 import './InspirationGrid.scss';
 
 export function InspirationGrid() {
-  const feed = useCursorList(listCommunityPosts);
+  const [search, setSearch] = useState('');
+  const [topic, setTopic] = useState('');
+  const [topics, setTopics] = useState<string[]>([]);
+  const fetchPosts = useCallback((cursor?: string) => listCommunityPosts(cursor, search, topic), [search, topic]);
+  const feed = useCursorList(fetchPosts);
+
+  useEffect(() => {
+    void listCommunityTopics()
+      .then((page) => setTopics(page.items))
+      .catch(() => setTopics([]));
+  }, []);
+
   return (
     <View className="inspiration-feed">
       <View className="feed-toolbar">
@@ -21,6 +33,29 @@ export function InspirationGrid() {
           发布穿搭
         </AppButton>
       </View>
+      <Input
+        className="feed-input feed-search"
+        value={search}
+        placeholder="搜索穿搭、单品或话题"
+        confirmType="search"
+        onInput={(event) => setSearch(event.detail.value)}
+      />
+      {!!topics.length && (
+        <ScrollView className="feed-topics" scrollX enhanced showScrollbar={false}>
+          <Text className={`feed-topic ${!topic ? 'feed-topic--active' : ''}`} onClick={() => setTopic('')}>
+            全部
+          </Text>
+          {topics.map((item) => (
+            <Text
+              key={item}
+              className={`feed-topic ${topic === item ? 'feed-topic--active' : ''}`}
+              onClick={() => setTopic(topic === item ? '' : item)}
+            >
+              #{item}
+            </Text>
+          ))}
+        </ScrollView>
+      )}
       <ResourceStatus
         loading={feed.loading && !feed.items.length}
         error={feed.error}

@@ -1,8 +1,21 @@
 import type { CommunityComment, CommunityPost, CreateCommunityPostInput, CursorPage } from '@lumi/contracts';
 import { request } from '../../services/http-client';
 
-export function listCommunityPosts(cursor?: string): Promise<CursorPage<CommunityPost>> {
-  return request(`/community/posts?limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+export function listCommunityPosts(
+  cursor?: string,
+  search?: string,
+  topic?: string,
+): Promise<CursorPage<CommunityPost>> {
+  const params = new URLSearchParams({ limit: '20' });
+  if (cursor) params.set('cursor', cursor);
+  if (search?.trim()) params.set('search', search.trim());
+  if (topic) params.set('topic', topic);
+  return request(`/community/posts?${params.toString()}`);
+}
+
+export function listCommunityTopics(search?: string): Promise<{ items: string[] }> {
+  const query = search ? `?search=${encodeURIComponent(search)}` : '';
+  return request(`/community/topics${query}`);
 }
 
 export function createCommunityPost(input: CreateCommunityPostInput): Promise<CommunityPost> {

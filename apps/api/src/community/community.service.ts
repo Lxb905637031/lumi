@@ -81,6 +81,7 @@ export class CommunityService {
     topic?: string,
     ownerId?: string,
     bookmarkUserId?: string,
+    search?: string,
   ): Promise<CursorPage<CommunityPost>> {
     const cursor = decodeTimestampCursor(pagination.cursor);
     const posts = await this.prisma.post.findMany({
@@ -89,6 +90,19 @@ export class CommunityService {
         ...(bookmarkUserId ? { bookmarks: { some: { userId: bookmarkUserId } } } : {}),
         deletedAt: null,
         ...(topic ? { topic } : {}),
+        ...(search
+          ? {
+              AND: [
+                {
+                  OR: [
+                    { title: { contains: search, mode: 'insensitive' as const } },
+                    { body: { contains: search, mode: 'insensitive' as const } },
+                    { topic: { contains: search, mode: 'insensitive' as const } },
+                  ],
+                },
+              ],
+            }
+          : {}),
         ...(cursor
           ? {
               OR: [
@@ -114,6 +128,21 @@ export class CommunityService {
       nextCursor:
         hasNext && last ? encodeTimestampCursor({ timestamp: last.createdAt.toISOString(), id: last.id }) : null,
     };
+  }
+
+  async listTopics(search?: string) {
+    const rows = await this.prisma.post.findMany({
+      where: {
+        moderationStatus: 'APPROVED',
+        deletedAt: null,
+        topic: { not: null, ...(search ? { contains: search, mode: 'insensitive' as const } : {}) },
+      },
+      select: { topic: true },
+      distinct: ['topic'],
+      orderBy: { topic: 'asc' },
+      take: 50,
+    });
+    return { items: rows.flatMap((row) => (row.topic ? [row.topic] : [])) };
   }
 
   async findPublic(id: string) {

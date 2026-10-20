@@ -2,6 +2,32 @@
   padding-top: 22px;
 }
 
+.feed-search {
+  margin-top: 18px;
+}
+
+.feed-topics {
+  width: 100%;
+  margin-top: 14px;
+  white-space: nowrap;
+}
+
+.feed-topic {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: 18px;
+  color: var(--lumi-color-muted);
+  font-size: 21px;
+}
+
+.feed-topic--active {
+  border-color: var(--lumi-color-primary);
+  background: var(--lumi-color-primary-soft);
+  color: var(--lumi-color-primary);
+}
+
 .feed-toolbar,
 .feed-composer-actions,
 .feed-card-actions {

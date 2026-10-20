@@ -71,4 +71,9 @@ export class CommunityQueryDto extends CursorPaginationDto {
   @IsString()
   @Length(1, 80)
   topic?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 80)
+  search?: string;
 }
