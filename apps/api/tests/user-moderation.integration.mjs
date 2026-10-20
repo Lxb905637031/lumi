@@ -63,6 +63,9 @@ try {
   assert.ok(listed);
   assert.equal(listed.status, 'ACTIVE');
   assert.equal(typeof listed.postCount, 'number');
+  const roleFiltered = await request(`/admin/users?status=ACTIVE&role=ADMIN&search=${admin.user.id}`, admin.accessToken);
+  assert.equal(roleFiltered.items.length, 1);
+  assert.equal(roleFiltered.items[0].role, 'ADMIN');
   await request('/admin/users?limit=100', admin.accessToken, 400);
 
   const suspended = await request(`/admin/users/${target.user.id}/status`, admin.accessToken, 200, 'PATCH', {
@@ -74,6 +77,7 @@ try {
   const suspensionHistory = await request(`/admin/users/${target.user.id}/actions?limit=20`, admin.accessToken);
   assert.equal(suspensionHistory.items.length, 1);
   assert.equal(suspensionHistory.items[0].toStatus, 'SUSPENDED');
+  await request(`/admin/users/${target.user.id}/actions?limit=0`, admin.accessToken, 400);
   await request('/body-profiles', target.accessToken, 401);
   await request('/auth/wechat/login', undefined, 401, 'POST', {
     code: `local:user-moderation:${runId}:target`,

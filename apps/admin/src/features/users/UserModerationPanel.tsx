@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { AdminUser, UserStatus } from '@lumi/contracts';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AdminUser, UserRole, UserStatus } from '@lumi/contracts';
 import {
   listAdminUsers,
   listUserModerationActions,
@@ -8,30 +8,39 @@ import {
 } from '../../services/moderation-api';
 
 const statusLabels: Record<UserStatus, string> = { ACTIVE: '正常', SUSPENDED: '已封禁', DELETED: '已注销' };
+const roleLabels: Record<UserRole, string> = { USER: '普通用户', MODERATOR: '审核员', ADMIN: '管理员' };
 
 export function UserModerationPanel() {
   const [items, setItems] = useState<AdminUser[]>([]);
-  const [status, setStatus] = useState<'ACTIVE' | 'SUSPENDED'>('ACTIVE');
+  const [status, setStatus] = useState<'ACTIVE' | 'SUSPENDED' | 'DELETED'>('ACTIVE');
+  const [role, setRole] = useState<UserRole>();
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string>();
   const [error, setError] = useState<string>();
   const [history, setHistory] = useState<Record<string, UserModerationAction[]>>({});
+  const historyCursors = useRef<Record<string, string | null>>({});
+  const listCursor = useRef<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (append = false) => {
     setLoading(true);
     setError(undefined);
     try {
-      const page = await listAdminUsers(status, search);
-      setItems(page.items);
+      const page = await listAdminUsers(status, role, search, append ? listCursor.current ?? undefined : undefined);
+      listCursor.current = page.nextCursor;
+      setNextCursor(page.nextCursor);
+      setItems((current) => (append ? [...current, ...page.items] : page.items));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '用户列表读取失败');
     } finally {
       setLoading(false);
     }
-  }, [search, status]);
+  }, [role, search, status]);
 
   useEffect(() => {
+    listCursor.current = null;
+    setNextCursor(null);
     void load();
   }, [load]);
 
@@ -67,8 +76,7 @@ export function UserModerationPanel() {
         reason: reason.trim(),
       });
       setItems((current) => current.map((row) => (row.id === item.id ? updated : row)));
-      const actions = await listUserModerationActions(item.id);
-      setHistory((current) => ({ ...current, [item.id]: actions.items }));
+      await showHistory(item.id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '角色调整失败，请刷新后重试');
     } finally {
@@ -76,11 +84,15 @@ export function UserModerationPanel() {
     }
   };
 
-  const showHistory = async (id: string) => {
+  const showHistory = async (id: string, append = false) => {
     setError(undefined);
     try {
-      const actions = await listUserModerationActions(id);
-      setHistory((current) => ({ ...current, [id]: actions.items }));
+      const actions = await listUserModerationActions(id, append ? historyCursors.current[id] ?? undefined : undefined);
+      historyCursors.current[id] = actions.nextCursor;
+      setHistory((current) => ({
+        ...current,
+        [id]: append ? [...(current[id] ?? []), ...actions.items] : actions.items,
+      }));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '审计记录读取失败');
     }
@@ -100,7 +112,7 @@ export function UserModerationPanel() {
         </button>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        {(['ACTIVE', 'SUSPENDED'] as const).map((value) => (
+        {(['ACTIVE', 'SUSPENDED', 'DELETED'] as const).map((value) => (
           <button
             key={value}
             className={`border px-3 py-2 text-xs ${status === value ? 'border-lumi-ink bg-lumi-ink text-white' : 'border-lumi-line'}`}
@@ -109,6 +121,19 @@ export function UserModerationPanel() {
             {statusLabels[value]}
           </button>
         ))}
+        <select
+          className="border border-lumi-line bg-lumi-canvas px-3 py-2 text-xs"
+          aria-label="按角色筛选"
+          value={role ?? ''}
+          onChange={(event) => setRole((event.target.value || undefined) as UserRole | undefined)}
+        >
+          <option value="">全部角色</option>
+          {(Object.keys(roleLabels) as UserRole[]).map((value) => (
+            <option key={value} value={value}>
+              {roleLabels[value]}
+            </option>
+          ))}
+        </select>
         <input
           className="min-w-52 flex-1 border border-lumi-line bg-lumi-canvas px-3 py-2 text-sm outline-none focus:border-lumi-brand"
           value={search}
@@ -154,9 +179,11 @@ export function UserModerationPanel() {
                     disabled={busyId === item.id || item.status === 'DELETED'}
                     onChange={(event) => void changeRole(item, event.target.value as 'USER' | 'MODERATOR' | 'ADMIN')}
                   >
-                    <option value="USER">普通用户</option>
-                    <option value="MODERATOR">审核员</option>
-                    <option value="ADMIN">管理员</option>
+                    {(Object.keys(roleLabels) as UserRole[]).map((value) => (
+                      <option key={value} value={value}>
+                        {roleLabels[value]}
+                      </option>
+                    ))}
                   </select>
                   {item.status === 'ACTIVE' && (
                     <button
@@ -180,7 +207,7 @@ export function UserModerationPanel() {
                     className="border border-lumi-line px-3 py-2 text-xs"
                     onClick={() => void showHistory(item.id)}
                   >
-                    操作记录
+                    {actionHistory ? '刷新记录' : '操作记录'}
                   </button>
                 </div>
                 {actionHistory && (
@@ -195,12 +222,29 @@ export function UserModerationPanel() {
                     ) : (
                       <p className="py-1 text-xs text-lumi-muted">暂无处罚记录</p>
                     )}
+                    {historyCursors.current[item.id] && (
+                      <button
+                        className="mt-2 border border-lumi-line px-2 py-1 text-xs"
+                        onClick={() => void showHistory(item.id, true)}
+                      >
+                        加载更早记录
+                      </button>
+                    )}
                   </div>
                 )}
               </article>
             );
           })}
         </div>
+      )}
+      {nextCursor && (
+        <button
+          className="mt-4 border border-lumi-line px-3 py-2 text-xs disabled:opacity-50"
+          onClick={() => void load(true)}
+          disabled={loading}
+        >
+          {loading ? '正在加载…' : '加载更多用户'}
+        </button>
       )}
     </section>
   );

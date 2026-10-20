@@ -115,10 +115,17 @@ export function publishAnnouncement(id: string, expectedVersion: number): Promis
   });
 }
 
-export function listAdminUsers(status?: 'ACTIVE' | 'SUSPENDED' | 'DELETED', search?: string) {
+export function listAdminUsers(
+  status?: 'ACTIVE' | 'SUSPENDED' | 'DELETED',
+  role?: 'USER' | 'MODERATOR' | 'ADMIN',
+  search?: string,
+  cursor?: string,
+) {
   const params = new URLSearchParams({ limit: '20' });
   if (status) params.set('status', status);
+  if (role) params.set('role', role);
   if (search?.trim()) params.set('search', search.trim());
+  if (cursor) params.set('cursor', cursor);
   return adminRequest<CursorPage<AdminUser>>(`/admin/users?${params.toString()}`);
 }
 
@@ -148,6 +155,8 @@ export type UserModerationAction = {
   createdAt: string;
 };
 
-export function listUserModerationActions(id: string) {
-  return adminRequest<CursorPage<UserModerationAction>>(`/admin/users/${id}/actions?limit=20`);
+export function listUserModerationActions(id: string, cursor?: string) {
+  const params = new URLSearchParams({ limit: '20' });
+  if (cursor) params.set('cursor', cursor);
+  return adminRequest<CursorPage<UserModerationAction>>(`/admin/users/${id}/actions?${params.toString()}`);
 }
