@@ -20,6 +20,7 @@
     "test:announcements": "node --env-file-if-exists=../../.env tests/announcements.integration.mjs",
     "test:user-moderation": "node --env-file-if-exists=../../.env tests/user-moderation.integration.mjs",
     "test:media-moderation": "node --env-file-if-exists=../../.env tests/media-moderation.integration.mjs",
+    "test:comment-moderation": "node --env-file-if-exists=../../.env tests/comment-moderation.integration.mjs",
     "test:runtime-config": "node --env-file-if-exists=../../.env tests/runtime-config.integration.mjs",
     "test:community-discovery": "node --env-file-if-exists=../../.env tests/community-discovery.integration.mjs",
     "test:challenges": "node --env-file-if-exists=../../.env tests/challenges.integration.mjs",
