@@ -10,6 +10,7 @@ import { UserModerationPanel } from '../../features/users/UserModerationPanel';
 import { MediaReviewQueue } from '../../features/moderation/MediaReviewQueue';
 import { useEffect, useState } from 'react';
 import { ChallengeOperations } from '../../features/challenges/ChallengeOperations';
+import { RuntimeConfigPanel } from '../../features/config/RuntimeConfigPanel';
 
 export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [overview, setOverview] = useState<AdminOverview>();
@@ -44,6 +45,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
       <AnnouncementComposer />
       <UserModerationPanel />
       <ChallengeOperations />
+      <RuntimeConfigPanel />
     </AdminShell>
   );
 }

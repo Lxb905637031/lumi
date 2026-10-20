@@ -191,6 +191,43 @@ export function listAdminUsers(
   return adminRequest<CursorPage<AdminUser>>(`/admin/users?${params.toString()}`);
 }
 
+export type RuntimeConfig = {
+  id: string;
+  key: string;
+  version: number;
+  value: Record<string, unknown>;
+  reason: string;
+  actorId: string;
+  createdAt: string;
+};
+
+export function listRuntimeConfigs() {
+  return adminRequest<{ items: RuntimeConfig[] }>('/admin/runtime-configs');
+}
+
+export function listRuntimeConfigHistory(key: string) {
+  return adminRequest<{ items: RuntimeConfig[] }>(`/admin/runtime-configs/${encodeURIComponent(key)}/history`);
+}
+
+export function updateRuntimeConfig(key: string, value: Record<string, unknown>, reason: string) {
+  return adminRequest<RuntimeConfig>('/admin/runtime-configs', {
+    method: 'PATCH',
+    body: JSON.stringify({ key, value, reason }),
+  });
+}
+
+export function rollbackRuntimeConfig(input: {
+  key: string;
+  expectedCurrentId: string;
+  targetId: string;
+  reason: string;
+}) {
+  return adminRequest<RuntimeConfig>('/admin/runtime-configs/rollback', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function updateAdminUser(
   id: string,
   input: {
