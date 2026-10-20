@@ -82,4 +82,34 @@ export class CommentModerationService {
       return { id, status: input.status };
     });
   }
+
+  async actions(id: string, query: ModerationQueueQueryDto) {
+    const comment = await this.prisma.comment.findUnique({ where: { id }, select: { id: true } });
+    if (!comment) throw new NotFoundException('评论不存在');
+    const cursor = decodeTimestampCursor(query.cursor);
+    const rows = await this.prisma.commentModerationAction.findMany({
+      where: {
+        commentId: id,
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(cursor.timestamp) } },
+                { createdAt: new Date(cursor.timestamp), id: { lt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: query.limit + 1,
+      select: { id: true, actorId: true, fromStatus: true, toStatus: true, reason: true, createdAt: true },
+    });
+    const hasNext = rows.length > query.limit;
+    const items = hasNext ? rows.slice(0, query.limit) : rows;
+    const last = items.at(-1);
+    return {
+      items: items.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+      nextCursor:
+        hasNext && last ? encodeTimestampCursor({ timestamp: last.createdAt.toISOString(), id: last.id }) : null,
+    };
+  }
 }

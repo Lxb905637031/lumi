@@ -106,6 +106,21 @@ try {
     reason: '通过集成审核',
   });
   assert.deepEqual(approved, { id: targetId, status: 'APPROVED' });
+  await request(`/admin/moderation/comments/${targetId}/actions`, author.accessToken, 403);
+  const approvalActions = await request(
+    `/admin/moderation/comments/${targetId}/actions?limit=20`,
+    moderator.accessToken,
+  );
+  assert.equal(approvalActions.items.length, 1);
+  assert.deepEqual(
+    {
+      actorId: approvalActions.items[0].actorId,
+      fromStatus: approvalActions.items[0].fromStatus,
+      toStatus: approvalActions.items[0].toStatus,
+      reason: approvalActions.items[0].reason,
+    },
+    { actorId: moderator.user.id, fromStatus: 'PENDING', toStatus: 'APPROVED', reason: '通过集成审核' },
+  );
   assert.equal(
     (await request('/admin/moderation/comments?status=PENDING&limit=20', moderator.accessToken)).items.length,
     2,
@@ -136,6 +151,15 @@ try {
     ['通过集成审核', '用户举报后复核下架'],
   );
   assert.ok(audit.every((row) => row.actorId === moderator.user.id));
+  const actionPage = await request(`/admin/moderation/comments/${targetId}/actions?limit=1`, moderator.accessToken);
+  assert.equal(actionPage.items.length, 1);
+  assert.ok(actionPage.nextCursor);
+  const actionPageTwo = await request(
+    `/admin/moderation/comments/${targetId}/actions?limit=1&cursor=${encodeURIComponent(actionPage.nextCursor)}`,
+    moderator.accessToken,
+  );
+  assert.equal(actionPageTwo.items.length, 1);
+  assert.notEqual(actionPage.items[0].id, actionPageTwo.items[0].id);
   assert.equal(
     await db.notification.count({ where: { userId: author.user.id, targetId: post.id, type: 'MODERATION' } }),
     2,
@@ -150,6 +174,7 @@ try {
           'status-filtered cursor pagination without duplicates',
           'approval moves comments between status queues',
           'approved comment removal and immutable actor/reason audit trail',
+          'audit history HTTP RBAC, transition fields and cursor pagination',
           'each moderation transition notifies the comment author',
         ],
         mode: 'Real loopback HTTP/PostgreSQL with disposable local fixtures; no external services',

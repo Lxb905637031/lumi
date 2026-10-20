@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ModerationStatus } from '@lumi/contracts';
-import type { CommentModerationItem } from '../../services/moderation-api';
-import { listModerationComments, updateCommentModerationStatus } from '../../services/moderation-api';
+import type { CommentModerationAction, CommentModerationItem } from '../../services/moderation-api';
+import {
+  listCommentModerationActions,
+  listModerationComments,
+  updateCommentModerationStatus,
+} from '../../services/moderation-api';
 
 const statusLabels: Record<ModerationStatus, string> = {
   PENDING: '待审核',
@@ -23,6 +27,9 @@ export function CommentReviewQueue() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string>();
   const [error, setError] = useState<string>();
+  const [history, setHistory] = useState<Record<string, CommentModerationAction[]>>({});
+  const [historyCursors, setHistoryCursors] = useState<Record<string, string | null>>({});
+  const [historyLoadingId, setHistoryLoadingId] = useState<string>();
 
   const load = useCallback(
     async (cursor?: string, append = false) => {
@@ -60,6 +67,20 @@ export function CommentReviewQueue() {
       setError(cause instanceof Error ? cause.message : '审核状态未确认，请刷新队列核对');
     } finally {
       setBusyId(undefined);
+    }
+  };
+
+  const showHistory = async (id: string, append = false) => {
+    setHistoryLoadingId(id);
+    setError(undefined);
+    try {
+      const page = await listCommentModerationActions(id, append ? (historyCursors[id] ?? undefined) : undefined);
+      setHistory((current) => ({ ...current, [id]: append ? [...(current[id] ?? []), ...page.items] : page.items }));
+      setHistoryCursors((current) => ({ ...current, [id]: page.nextCursor }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '评论审计记录读取失败');
+    } finally {
+      setHistoryLoadingId(undefined);
     }
   };
 
@@ -157,6 +178,33 @@ export function CommentReviewQueue() {
               ) : (
                 <span className="text-xs text-lumi-muted">已完成处理</span>
               )}
+              <div className="col-span-full flex flex-wrap items-center gap-3 border-l-2 border-lumi-line pl-3">
+                <button
+                  type="button"
+                  className="text-xs text-lumi-muted underline decoration-lumi-line underline-offset-4"
+                  disabled={historyLoadingId === item.id}
+                  onClick={() => void showHistory(item.id)}
+                >
+                  {history[item.id] ? '刷新操作记录' : '查看操作记录'}
+                </button>
+                {history[item.id]?.length === 0 && <span className="text-xs text-lumi-muted">暂无审核记录</span>}
+                {history[item.id]?.map((action) => (
+                  <span className="text-xs text-lumi-muted" key={action.id}>
+                    {statusLabels[action.fromStatus]} → {statusLabels[action.toStatus]} · 操作者 {action.actorId} ·{' '}
+                    {action.reason || '未填写理由'} · {new Date(action.createdAt).toLocaleString('zh-CN')}
+                  </span>
+                ))}
+                {history[item.id] && historyCursors[item.id] && (
+                  <button
+                    type="button"
+                    className="text-xs text-lumi-brand underline decoration-lumi-brand underline-offset-4"
+                    disabled={historyLoadingId === item.id}
+                    onClick={() => void showHistory(item.id, true)}
+                  >
+                    加载更早记录
+                  </button>
+                )}
+              </div>
             </article>
           ))}
         </div>

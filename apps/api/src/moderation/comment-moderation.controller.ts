@@ -19,6 +19,11 @@ export class CommentModerationController {
     return this.moderation.list(query);
   }
 
+  @Get(':id/actions')
+  actions(@Param('id') id: string, @Query() query: ModerationQueueQueryDto) {
+    return this.moderation.actions(id, query);
+  }
+
   @Patch(':id/status')
   update(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateModerationStatusDto) {
     return this.moderation.update(id, user.id, dto);

@@ -85,6 +85,15 @@ export type CommentModerationItem = {
 
 export type CommentModerationResult = { id: string; status: ModerationStatus };
 
+export type CommentModerationAction = {
+  id: string;
+  actorId: string;
+  fromStatus: ModerationStatus;
+  toStatus: ModerationStatus;
+  reason: string | null;
+  createdAt: string;
+};
+
 export function listModerationComments(status: ModerationStatus, cursor?: string) {
   const params = new URLSearchParams({ status, limit: '20' });
   if (cursor) params.set('cursor', cursor);
@@ -102,6 +111,14 @@ export function updateCommentModerationStatus(
     method: 'PATCH',
     body: JSON.stringify({ status, reason }),
   });
+}
+
+export function listCommentModerationActions(commentId: string, cursor?: string) {
+  const params = new URLSearchParams({ limit: '20' });
+  if (cursor) params.set('cursor', cursor);
+  return adminRequest<{ items: CommentModerationAction[]; nextCursor: string | null }>(
+    `/admin/moderation/comments/${commentId}/actions?${params.toString()}`,
+  );
 }
 
 export function listModerationReports(status: ReportStatus = 'OPEN', cursor?: string) {
