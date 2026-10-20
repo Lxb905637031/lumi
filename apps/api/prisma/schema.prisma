@@ -108,6 +108,8 @@ model User {
   sessions                 UserSession[]
   clothingItems            ClothingItem[]
   moderationActions        ModerationAction[]        @relation("ModerationActor")
+  userModerationActions    UserModerationAction[]   @relation("UserModerationSubject")
+  performedUserActions      UserModerationAction[]   @relation("UserModerationActor")
   likes                    PostLike[]
   bookmarks                PostBookmark[]
   reports                  PostReport[]
@@ -206,6 +208,24 @@ model AdminCredential {
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("admin_credentials")
+}
+
+model UserModerationAction {
+  id         String     @id @default(cuid())
+  userId     String     @map("user_id")
+  actorId    String?    @map("actor_id")
+  fromStatus UserStatus @map("from_status")
+  toStatus   UserStatus @map("to_status")
+  fromRole   UserRole   @map("from_role")
+  toRole     UserRole   @map("to_role")
+  reason     String
+  createdAt  DateTime   @default(now()) @map("created_at")
+  user       User       @relation("UserModerationSubject", fields: [userId], references: [id], onDelete: Cascade)
+  actor      User?      @relation("UserModerationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("user_moderation_actions")
 }
 
 model BodyProfile {

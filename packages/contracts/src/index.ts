@@ -70,6 +70,19 @@ export type DataExportRequest = {
 export const userRoles = ['USER', 'MODERATOR', 'ADMIN'] as const;
 export type UserRole = (typeof userRoles)[number];
 
+export const userStatuses = ['ACTIVE', 'SUSPENDED', 'DELETED'] as const;
+export type UserStatus = (typeof userStatuses)[number];
+
+export type AdminUser = {
+  id: string;
+  status: UserStatus;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+  postCount: number;
+  reportCount: number;
+};
+
 export const moderationStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'REMOVED'] as const;
 export type ModerationStatus = (typeof moderationStatuses)[number];
 

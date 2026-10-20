@@ -1,5 +1,6 @@
 import type {
   Announcement,
+  AdminUser,
   CursorPage,
   ModerationQueueItem,
   ModerationStatus,
@@ -111,5 +112,27 @@ export function publishAnnouncement(id: string, expectedVersion: number): Promis
   return adminRequest(`/admin/announcements/${id}/publish`, {
     method: 'POST',
     body: JSON.stringify({ expectedVersion }),
+  });
+}
+
+export function listAdminUsers(status?: 'ACTIVE' | 'SUSPENDED' | 'DELETED', search?: string) {
+  const params = new URLSearchParams({ limit: '20' });
+  if (status) params.set('status', status);
+  if (search?.trim()) params.set('search', search.trim());
+  return adminRequest<CursorPage<AdminUser>>(`/admin/users?${params.toString()}`);
+}
+
+export function updateAdminUser(
+  id: string,
+  input: {
+    status?: 'ACTIVE' | 'SUSPENDED';
+    role?: 'USER' | 'MODERATOR' | 'ADMIN';
+    expectedUpdatedAt: string;
+    reason: string;
+  },
+) {
+  return adminRequest<AdminUser>(`/admin/users/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
   });
 }
