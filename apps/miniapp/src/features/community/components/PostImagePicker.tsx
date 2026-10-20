@@ -37,7 +37,7 @@ export function PostImagePicker({
         审核通过后公开，不公开身体参数。
       </Text>
       {!source && (
-        <AppButton variant="secondary" disabled={disabled || assets.length >= 9} onClick={onAdd}>
+        <AppButton block variant="secondary" disabled={disabled || assets.length >= 9} onClick={onAdd}>
           {remaining ? `重试剩余 ${remaining} 张上传` : '添加图片'}
         </AppButton>
       )}

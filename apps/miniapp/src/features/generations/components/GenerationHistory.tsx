@@ -113,13 +113,13 @@ export function GenerationHistory({ selectedId }: { selectedId?: string }) {
             <Text>{statusLabels[job.status]}</Text>
             <Text className="profile-muted">{new Date(job.createdAt).toLocaleString('zh-CN')}</Text>
           </View>
-          <AppButton disabled={busy} variant="secondary" onClick={() => void read(job.id)}>
+          <AppButton compact disabled={busy} variant="secondary" onClick={() => void read(job.id)}>
             查看任务
           </AppButton>
         </View>
       ))}
       {list.hasMore && (
-        <AppButton variant="secondary" onClick={() => void list.loadMore()}>
+        <AppButton block variant="secondary" onClick={() => void list.loadMore()}>
           更多记录
         </AppButton>
       )}
@@ -140,16 +140,16 @@ export function GenerationHistory({ selectedId }: { selectedId?: string }) {
             />
           ))}
           {['QUEUED', 'RUNNING'].includes(selected.status) && (
-            <AppButton disabled={busy} variant="secondary" onClick={() => void act(selected, 'cancel')}>
+            <AppButton block disabled={busy} variant="secondary" onClick={() => void act(selected, 'cancel')}>
               取消任务
             </AppButton>
           )}
           {['FAILED', 'DEAD_LETTER'].includes(selected.status) && (
-            <AppButton loading={busy} onClick={() => void act(selected, 'retry')}>
+            <AppButton block loading={busy} onClick={() => void act(selected, 'retry')}>
               重试原任务
             </AppButton>
           )}
-          <AppButton disabled={busy} variant="secondary" onClick={() => void read(selected.id)}>
+          <AppButton block disabled={busy} variant="secondary" onClick={() => void read(selected.id)}>
             刷新状态
           </AppButton>
         </View>

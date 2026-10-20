@@ -23,6 +23,7 @@ export function GenerationResultActions({ job, output, busy, onAction }: Props) 
       {localPreview && <InlineFeedback message="本地 SVG 开发预览，不是真实 AI，不提供相册下载或好友分享。" />}
       <View className="generation-result-actions">
         <AppButton
+          block
           disabled={busy || !!output.selectedAt}
           variant="secondary"
           onClick={() => onAction(output, 'select')}
@@ -30,6 +31,7 @@ export function GenerationResultActions({ job, output, busy, onAction }: Props) 
           {output.selectedAt ? '已确认' : '确认此结果'}
         </AppButton>
         <AppButton
+          block
           disabled={busy || (!output.savedAt && !output.selectedAt)}
           variant="secondary"
           onClick={() => onAction(output, output.savedAt ? 'unsave' : 'save')}
@@ -37,6 +39,7 @@ export function GenerationResultActions({ job, output, busy, onAction }: Props) 
           {output.savedAt ? '取消云端保存' : '云端保存'}
         </AppButton>
         <AppButton
+          block
           disabled={busy || !output.selectedAt}
           onClick={() =>
             void Taro.navigateTo({
@@ -46,7 +49,7 @@ export function GenerationResultActions({ job, output, busy, onAction }: Props) 
         >
           编辑并提交社区审核
         </AppButton>
-        <AppButton disabled={busy} variant="secondary" onClick={() => onAction(output, 'delete')}>
+        <AppButton block disabled={busy} variant="secondary" onClick={() => onAction(output, 'delete')}>
           删除此结果
         </AppButton>
       </View>

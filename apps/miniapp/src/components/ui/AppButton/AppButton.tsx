@@ -8,6 +8,8 @@ type AppButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   variant?: 'primary' | 'secondary';
+  compact?: boolean;
+  block?: boolean;
 };
 
 export function AppButton({
@@ -16,10 +18,13 @@ export function AppButton({
   disabled = false,
   loading = false,
   variant = 'primary',
+  compact = false,
+  block = false,
 }: AppButtonProps) {
+  const sizeClass = compact ? 'lumi-button--compact' : block ? 'lumi-button--block' : '';
   return (
     <Button
-      className={`lumi-button lumi-button--${variant}`}
+      className={`lumi-button lumi-button--${variant} ${sizeClass}`.trim()}
       disabled={disabled || loading}
       loading={loading}
       onClick={onClick}

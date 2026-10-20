@@ -16,7 +16,7 @@ export function InspirationGrid() {
           <Text className="feed-heading">推荐</Text>
           <Text className="feed-caption">审核通过的穿搭灵感</Text>
         </View>
-        <AppButton variant="secondary" onClick={() => void Taro.navigateTo({ url: '/pages/publish/index' })}>
+        <AppButton compact variant="secondary" onClick={() => void Taro.navigateTo({ url: '/pages/publish/index' })}>
           发布穿搭
         </AppButton>
       </View>
@@ -42,7 +42,7 @@ export function InspirationGrid() {
         )}
       </View>
       {feed.hasMore && (
-        <AppButton loading={feed.loading} variant="secondary" onClick={() => void feed.loadMore()}>
+        <AppButton block loading={feed.loading} variant="secondary" onClick={() => void feed.loadMore()}>
           加载更多
         </AppButton>
       )}

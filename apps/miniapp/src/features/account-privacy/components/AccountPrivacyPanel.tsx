@@ -147,7 +147,7 @@ export function AccountPrivacyPanel() {
             <Text className="privacy-hint">
               包括档案、衣橱、试穿任务、社区内容、关注关系和消息元数据，不包含私有对象原图。
             </Text>
-            <AppButton loading={busy} onClick={() => void exportData()}>
+            <AppButton block loading={busy} onClick={() => void exportData()}>
               申请数据导出
             </AppButton>
             {exports.map((item) => (
@@ -157,6 +157,7 @@ export function AccountPrivacyPanel() {
                   <Text className="privacy-hint">申请于 {new Date(item.requestedAt).toLocaleString('zh-CN')}</Text>
                 </View>
                 <AppButton
+                  compact
                   variant="secondary"
                   disabled={item.status !== 'READY'}
                   loading={busy}
@@ -174,11 +175,12 @@ export function AccountPrivacyPanel() {
             </Text>
             {deletion && <Text className="privacy-state">当前状态：{deletionStatus[deletion.status]}</Text>}
             {deletion?.status === 'REQUESTED' ? (
-              <AppButton variant="secondary" loading={busy} onClick={() => void cancel()}>
+              <AppButton block variant="secondary" loading={busy} onClick={() => void cancel()}>
                 撤回注销申请
               </AppButton>
             ) : (
               <AppButton
+                block
                 variant="secondary"
                 loading={busy}
                 disabled={deletion?.status === 'PROCESSING' || deletion?.status === 'COMPLETED'}

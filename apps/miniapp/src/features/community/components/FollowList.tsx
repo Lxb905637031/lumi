@@ -43,10 +43,18 @@ export function FollowList() {
       </View>
       <View className="profile-section">
         <View className="feed-card-actions">
-          <AppButton variant={mode === 'following' ? 'primary' : 'secondary'} onClick={() => switchMode('following')}>
+          <AppButton
+            compact
+            variant={mode === 'following' ? 'primary' : 'secondary'}
+            onClick={() => switchMode('following')}
+          >
             我关注的
           </AppButton>
-          <AppButton variant={mode === 'followers' ? 'primary' : 'secondary'} onClick={() => switchMode('followers')}>
+          <AppButton
+            compact
+            variant={mode === 'followers' ? 'primary' : 'secondary'}
+            onClick={() => switchMode('followers')}
+          >
             关注我的
           </AppButton>
         </View>
@@ -60,13 +68,13 @@ export function FollowList() {
         {list.items.map((user) => (
           <View className="profile-record" key={user.id}>
             <Text>{user.displayName}</Text>
-            <AppButton variant="secondary" loading={busyId === user.id} onClick={() => void toggle(user)}>
+            <AppButton compact variant="secondary" loading={busyId === user.id} onClick={() => void toggle(user)}>
               {user.followed ? '取消关注' : '回关'}
             </AppButton>
           </View>
         ))}
         {list.hasMore && (
-          <AppButton variant="secondary" onClick={() => void list.loadMore()}>
+          <AppButton block variant="secondary" onClick={() => void list.loadMore()}>
             更多
           </AppButton>
         )}

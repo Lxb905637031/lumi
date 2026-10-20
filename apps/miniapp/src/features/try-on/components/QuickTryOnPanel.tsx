@@ -20,11 +20,11 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
       <Text className="try-on-empty-copy">
         先明确选择人物版本和单件衣物，再确认生成。当前仅为本地预览，不是真实 AI，不保证尺码合身。
       </Text>
-      <AppButton variant="secondary" onClick={onGoProfile}>
+      <AppButton block variant="secondary" onClick={onGoProfile}>
         完善档案和衣橱
       </AppButton>
       {!state.pendingInput && !active && (
-        <AppButton variant="secondary" loading={state.busy} onClick={() => void workflow.prepare()}>
+        <AppButton block variant="secondary" loading={state.busy} onClick={() => void workflow.prepare()}>
           {state.loaded ? '刷新资料和额度' : '选择试穿资料'}
         </AppButton>
       )}
@@ -34,6 +34,7 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
           <TryOnInputPicker state={state} workflow={workflow} />
           {!active && (
             <AppButton
+              block
               loading={state.busy}
               disabled={!state.profileVersionId || !state.clothingId || (exhausted && !state.pendingInput)}
               onClick={() => void workflow.start()}
@@ -46,7 +47,7 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
       {exhausted && <InlineFeedback message="免费额度不足；仍可查询、取消已有任务，不开放付费购买。" />}
       {state.error && <InlineFeedback message={state.error} tone="error" />}
       {state.error && state.job && !active && (
-        <AppButton variant="secondary" disabled={state.busy} onClick={() => void workflow.refreshJob()}>
+        <AppButton block variant="secondary" disabled={state.busy} onClick={() => void workflow.refreshJob()}>
           重新查询原任务
         </AppButton>
       )}
@@ -58,16 +59,16 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
           <InlineFeedback
             message={state.job?.status === 'QUEUED' ? '已预留额度，任务排队中。' : '正在生成，成功后结算额度。'}
           />
-          <AppButton variant="secondary" disabled={state.busy} onClick={() => void workflow.refreshJob()}>
+          <AppButton block variant="secondary" disabled={state.busy} onClick={() => void workflow.refreshJob()}>
             查询任务状态
           </AppButton>
-          <AppButton variant="secondary" disabled={state.busy} onClick={() => void workflow.cancel()}>
+          <AppButton block variant="secondary" disabled={state.busy} onClick={() => void workflow.cancel()}>
             取消任务并释放预留
           </AppButton>
         </>
       )}
       {state.job && ['FAILED', 'DEAD_LETTER'].includes(state.job.status) && (
-        <AppButton variant="secondary" disabled={state.busy || exhausted} onClick={() => void workflow.retry()}>
+        <AppButton block variant="secondary" disabled={state.busy || exhausted} onClick={() => void workflow.retry()}>
           使用原快照重试
         </AppButton>
       )}
@@ -80,6 +81,7 @@ export function QuickTryOnPanel({ onGoProfile }: { onGoProfile: () => void }) {
             输出默认私有。在生成记录中确认、云端保存、删除或提交社区审核；真实 AI、相册下载和好友分享尚未验收。
           </Text>
           <AppButton
+            block
             variant="secondary"
             onClick={() =>
               void Taro.navigateTo({ url: `/pages/generations/index?id=${encodeURIComponent(state.job!.id)}` })

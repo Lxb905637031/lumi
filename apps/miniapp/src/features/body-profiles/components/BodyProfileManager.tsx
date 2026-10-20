@@ -55,17 +55,17 @@ export function BodyProfileManager() {
             <Text className="profile-muted">版本 {profile.activeVersion}</Text>
           </View>
           <View className="profile-record-actions">
-            <AppButton variant="secondary" onClick={() => editor.edit(profile)}>
+            <AppButton compact variant="secondary" onClick={() => editor.edit(profile)}>
               编辑
             </AppButton>
-            <AppButton variant="secondary" onClick={() => void archive(profile.id)}>
+            <AppButton compact variant="secondary" onClick={() => void archive(profile.id)}>
               停用
             </AppButton>
           </View>
         </View>
       ))}
       {list.hasMore && (
-        <AppButton variant="secondary" onClick={() => void list.loadMore()}>
+        <AppButton block variant="secondary" onClick={() => void list.loadMore()}>
           更多档案
         </AppButton>
       )}
@@ -96,10 +96,10 @@ export function BodyProfileManager() {
         {editor.preview && <Image className="profile-person-preview" src={editor.preview} mode="aspectFit" />}
         {editor.assetId && <Text className="profile-muted">已关联人物图片</Text>}
         {editor.error && <InlineFeedback message={editor.error} tone="error" />}
-        <AppButton variant="secondary" disabled={editor.busy} onClick={() => void editor.chooseImage()}>
+        <AppButton block variant="secondary" disabled={editor.busy} onClick={() => void editor.chooseImage()}>
           上传人物照
         </AppButton>
-        <AppButton loading={editor.busy} onClick={() => void editor.save()}>
+        <AppButton block loading={editor.busy} onClick={() => void editor.save()}>
           保存资料，不发起生成
         </AppButton>
       </View>

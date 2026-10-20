@@ -44,13 +44,18 @@ export function PostDetail({ id }: { id: string }) {
           ))}
           <Text className="feed-card-body">{detail.post.body}</Text>
           <View className="feed-card-actions">
-            <AppButton variant="secondary" disabled={detail.loading} onClick={() => void detail.act('like')}>
+            <AppButton compact variant="secondary" disabled={detail.loading} onClick={() => void detail.act('like')}>
               {detail.state.liked ? '取消点赞' : '点赞'} {detail.post.likeCount}
             </AppButton>
-            <AppButton variant="secondary" disabled={detail.loading} onClick={() => void detail.act('bookmark')}>
+            <AppButton
+              compact
+              variant="secondary"
+              disabled={detail.loading}
+              onClick={() => void detail.act('bookmark')}
+            >
               {detail.state.bookmarked ? '取消收藏' : '收藏'}
             </AppButton>
-            <AppButton variant="secondary" disabled={detail.loading} onClick={() => void report()}>
+            <AppButton compact variant="secondary" disabled={detail.loading} onClick={() => void report()}>
               举报
             </AppButton>
           </View>
@@ -62,6 +67,7 @@ export function PostDetail({ id }: { id: string }) {
             placeholder="写下评论，审核后公开"
           />
           <AppButton
+            block
             disabled={!comment.trim() || detail.loading}
             onClick={() =>
               void detail.act('comment', comment.trim()).then((success) => {
@@ -85,7 +91,7 @@ export function PostDetail({ id }: { id: string }) {
             </View>
           ))}
           {detail.comments.hasMore && (
-            <AppButton variant="secondary" onClick={() => void detail.comments.loadMore()}>
+            <AppButton block variant="secondary" onClick={() => void detail.comments.loadMore()}>
               更多评论
             </AppButton>
           )}

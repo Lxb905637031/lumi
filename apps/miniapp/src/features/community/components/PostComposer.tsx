@@ -22,10 +22,10 @@ export function PostComposer({ source }: { source?: PostSource }) {
               ? '已提交审核，通过后公开展示。'
               : '原帖子已有审核结论，请到我的帖子查看。'}
         </Text>
-        <AppButton onClick={() => void Taro.redirectTo({ url: '/pages/posts/index?collection=mine' })}>
+        <AppButton block onClick={() => void Taro.redirectTo({ url: '/pages/posts/index?collection=mine' })}>
           查看我的帖子
         </AppButton>
-        <AppButton variant="secondary" onClick={() => workflow.newDraft()}>
+        <AppButton block variant="secondary" onClick={() => workflow.newDraft()}>
           新建另一篇
         </AppButton>
       </View>
@@ -38,7 +38,7 @@ export function PostComposer({ source }: { source?: PostSource }) {
         <Text className="page-description">公开发布前会经过审核，身体参数和私有资料不会公开。</Text>
       </View>
       {!state.ready && (
-        <AppButton loading={state.busy} onClick={() => void workflow.prepare()}>
+        <AppButton block loading={state.busy} onClick={() => void workflow.prepare()}>
           {source ? '读取已确认结果并编辑' : '登录并开始编辑'}
         </AppButton>
       )}
@@ -57,6 +57,7 @@ export function PostComposer({ source }: { source?: PostSource }) {
             <InlineFeedback message="发布结果尚未确认，内容和原请求标识已保留。继续原发布不会重复创建，请勿换账号或重建内容。" />
           )}
           <AppButton
+            block
             loading={state.busy}
             disabled={
               state.busy ||
@@ -77,6 +78,7 @@ export function PostComposer({ source }: { source?: PostSource }) {
       )}
       {state.error && <InlineFeedback message={state.error} tone="error" />}
       <AppButton
+        block
         variant="secondary"
         disabled={state.busy}
         onClick={() => void Taro.navigateTo({ url: '/pages/posts/index?collection=mine' })}

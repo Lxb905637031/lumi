@@ -64,7 +64,7 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
         <View className="profile-login surface">
           <Text className="section-title">登录后管理你的衣橱</Text>
           <Text className="section-caption">公开内容仍可浏览。人物照片和身体参数默认私有，提交前会再次确认。</Text>
-          <AppButton loading={busy} onClick={() => void authenticate()}>
+          <AppButton block loading={busy} onClick={() => void authenticate()}>
             查看说明并登录
           </AppButton>
         </View>
@@ -82,8 +82,10 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
             ))}
           </View>
           <View className="profile-actions">
-            <AppButton onClick={onStartTryOn}>开始一次试穿</AppButton>
-            <AppButton variant="secondary" loading={busy} onClick={() => void signOut()}>
+            <AppButton block onClick={onStartTryOn}>
+              开始一次试穿
+            </AppButton>
+            <AppButton block variant="secondary" loading={busy} onClick={() => void signOut()}>
               退出登录
             </AppButton>
           </View>

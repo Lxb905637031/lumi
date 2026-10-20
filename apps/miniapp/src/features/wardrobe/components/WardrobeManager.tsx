@@ -142,7 +142,7 @@ export function WardrobeManager() {
           <Text className="wardrobe-overview-count">{list.items.length}</Text>
           <Text className="wardrobe-overview-label">已加载单品</Text>
         </View>
-        <AppButton onClick={() => (editingId ? resetEditor() : setEditingId('new'))}>
+        <AppButton compact onClick={() => (editingId ? resetEditor() : setEditingId('new'))}>
           {editingId ? '取消编辑' : '添加衣物'}
         </AppButton>
       </View>
@@ -273,12 +273,12 @@ export function WardrobeManager() {
               {item.style && <Text className="wardrobe-item-meta">{item.style}</Text>}
               <View className="wardrobe-item-actions">
                 <View className="wardrobe-item-action">
-                  <AppButton variant="secondary" onClick={() => edit(item)}>
+                  <AppButton compact variant="secondary" onClick={() => edit(item)}>
                     编辑
                   </AppButton>
                 </View>
                 <View className="wardrobe-item-action">
-                  <AppButton variant="secondary" onClick={() => void remove(item.id)}>
+                  <AppButton compact variant="secondary" onClick={() => void remove(item.id)}>
                     删除
                   </AppButton>
                 </View>
@@ -288,7 +288,7 @@ export function WardrobeManager() {
         ))}
       </View>
       {list.hasMore && (
-        <AppButton variant="secondary" loading={list.loading} onClick={() => void list.loadMore()}>
+        <AppButton block variant="secondary" loading={list.loading} onClick={() => void list.loadMore()}>
           加载更多衣物
         </AppButton>
       )}

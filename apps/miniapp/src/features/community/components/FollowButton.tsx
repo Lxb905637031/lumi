@@ -36,7 +36,7 @@ export function FollowButton({ userId }: { userId: string }) {
   };
   return (
     <>
-      <AppButton variant="secondary" loading={busy} onClick={() => void toggle()}>
+      <AppButton compact variant="secondary" loading={busy} onClick={() => void toggle()}>
         {following ? '取消关注' : '关注作者'}
       </AppButton>
       {error && <InlineFeedback message={error} tone="error" />}

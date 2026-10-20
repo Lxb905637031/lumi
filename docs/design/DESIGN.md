@@ -70,6 +70,7 @@
 - 小组件圆角：8rpx；输入和按钮：10rpx；媒体和大容器：14rpx。
 - 阴影：默认不使用；浮层仅使用 `0 8rpx 32rpx rgba(31, 39, 34, .08)`。
 - 触控目标：至少 88rpx；固定底部操作区包含安全区 padding。
+- 主提交、保存、试穿、重试按钮使用 `block`；工具栏、筛选和列表行内操作使用 `compact`。普通按钮不隐式拉伸到整行，业务 SCSS 不重复覆盖全局按钮宽度。
 
 ## 小程序框架区
 
@@ -81,7 +82,7 @@
 
 | 组件              | 变体                                    | 必需状态                     | 代码映射                                      |
 | ----------------- | --------------------------------------- | ---------------------------- | --------------------------------------------- |
-| Button            | primary / secondary / quiet / danger    | 默认、按下、禁用、加载、成功 | `components/ui/AppButton`                     |
+| Button            | primary / secondary + block / compact   | 默认、按下、禁用、加载、成功 | `components/ui/AppButton`                     |
 | Input             | single / multiline / picker             | 默认、聚焦、错误、禁用、只读 | 业务 feature 表单                             |
 | Surface           | plain / outlined / media                | 默认、按下、选中、只读       | feature SCSS 的 `surface` 规则                |
 | ResourceStatus    | loading / empty / error                 | 首次空、筛选空、可恢复错误   | `components/ui/ResourceStatus`                |

@@ -40,14 +40,14 @@ export function PostCollection({ collection }: { collection: 'mine' | 'bookmarks
           {post.moderationStatus === 'APPROVED' ? <PostCard post={post} /> : <Text>{post.title}</Text>}
           <Text className="feed-caption">{statusNames[post.moderationStatus]}</Text>
           {collection === 'mine' && (
-            <AppButton variant="secondary" onClick={() => void remove(post.id)}>
+            <AppButton compact variant="secondary" onClick={() => void remove(post.id)}>
               删除
             </AppButton>
           )}
         </View>
       ))}
       {list.hasMore && (
-        <AppButton variant="secondary" onClick={() => void list.loadMore()}>
+        <AppButton block variant="secondary" onClick={() => void list.loadMore()}>
           加载更多
         </AppButton>
       )}

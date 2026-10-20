@@ -58,7 +58,7 @@ export function PrivateMediaImage({
       )}
       {error && <InlineFeedback message={error} tone="error" />}
       {(!url || error) && (
-        <AppButton variant="secondary" loading={busy} onClick={() => void load()}>
+        <AppButton block variant="secondary" loading={busy} onClick={() => void load()}>
           重新读取私有图片
         </AppButton>
       )}

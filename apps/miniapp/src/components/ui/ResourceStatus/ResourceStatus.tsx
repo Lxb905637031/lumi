@@ -23,7 +23,7 @@ export function ResourceStatus({
       <View className="resource-state resource-state--error">
         <Text className="resource-state-title">暂时无法读取</Text>
         <InlineFeedback message={error} tone="error" />
-        <AppButton variant="secondary" onClick={onRetry}>
+        <AppButton block variant="secondary" onClick={onRetry}>
           重新读取
         </AppButton>
       </View>

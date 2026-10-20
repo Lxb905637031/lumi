@@ -38,7 +38,7 @@ export function TryOnInputPicker({ state, workflow }: { state: TryOnSnapshot; wo
       )}
       {!profiles.length && <Text className="profile-hint">还没有可用人物档案，请先添加人物照和资料。</Text>}
       {state.profileCursor && (
-        <AppButton variant="secondary" disabled={locked} onClick={() => void workflow.more('profiles')}>
+        <AppButton compact variant="secondary" disabled={locked} onClick={() => void workflow.more('profiles')}>
           更多人物档案
         </AppButton>
       )}
@@ -59,7 +59,7 @@ export function TryOnInputPicker({ state, workflow }: { state: TryOnSnapshot; wo
       </Picker>
       {!state.clothing.length && <Text className="profile-hint">还没有衣橱单品，请先上传一件衣物图片。</Text>}
       {state.clothingCursor && (
-        <AppButton variant="secondary" disabled={locked} onClick={() => void workflow.more('clothing')}>
+        <AppButton compact variant="secondary" disabled={locked} onClick={() => void workflow.more('clothing')}>
           更多衣物
         </AppButton>
       )}

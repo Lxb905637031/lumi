@@ -43,7 +43,7 @@ export function NotificationCenter() {
         <Text className="page-title">服务消息</Text>
         <Text className="page-description">任务、审核和社区互动的状态更新。</Text>
       </View>
-      <AppButton variant="secondary" onClick={() => void markAll()}>
+      <AppButton compact variant="secondary" onClick={() => void markAll()}>
         全部标记为已读
       </AppButton>
       <ResourceStatus
@@ -66,7 +66,7 @@ export function NotificationCenter() {
         </View>
       ))}
       {list.hasMore && (
-        <AppButton variant="secondary" onClick={() => void list.loadMore()}>
+        <AppButton block variant="secondary" onClick={() => void list.loadMore()}>
           更多消息
         </AppButton>
       )}
