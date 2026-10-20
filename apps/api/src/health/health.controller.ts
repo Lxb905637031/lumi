@@ -12,4 +12,19 @@ export class HealthController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Get('metrics')
+  getMetrics() {
+    const memory = process.memoryUsage();
+    return {
+      process: {
+        uptimeSeconds: Math.round(process.uptime()),
+        rssBytes: memory.rss,
+        heapUsedBytes: memory.heapUsed,
+        heapTotalBytes: memory.heapTotal,
+      },
+      node: process.version,
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
