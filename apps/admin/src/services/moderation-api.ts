@@ -168,6 +168,27 @@ export function getAdminOverview(): Promise<AdminOverview> {
   return adminRequest('/admin/overview');
 }
 
+export type AdminAuditType = 'POST' | 'COMMENT' | 'MEDIA' | 'USER';
+export type AdminAuditItem = {
+  id: string;
+  type: AdminAuditType;
+  targetId: string;
+  actorId: string | null;
+  fromStatus: string;
+  toStatus: string;
+  reason: string | null;
+  createdAt: string;
+};
+
+export function listAdminAudit(input: { type?: AdminAuditType; actorId?: string; targetId?: string; cursor?: string }) {
+  const params = new URLSearchParams({ limit: '20' });
+  if (input.type) params.set('type', input.type);
+  if (input.actorId?.trim()) params.set('actorId', input.actorId.trim());
+  if (input.targetId?.trim()) params.set('targetId', input.targetId.trim());
+  if (input.cursor) params.set('cursor', input.cursor);
+  return adminRequest<CursorPage<AdminAuditItem>>(`/admin/audit?${params.toString()}`);
+}
+
 export function listAnnouncements(): Promise<CursorPage<Announcement>> {
   return adminRequest('/admin/announcements?limit=20');
 }
