@@ -6,7 +6,7 @@ export default function PostPage() {
   const router = useRouter();
   return (
     <View className="page">
-      <PostDetail id={router.params.id ?? ''} />
+      <PostDetail id={router.params.id ?? ''} commentId={router.params.commentId} />
     </View>
   );
 }

@@ -20,6 +20,9 @@ export function setPostBookmark(id: string, active: boolean) {
 export function getPost(id: string): Promise<CommunityPost> {
   return request(`/community/posts/${id}`);
 }
+export function getPostComment(id: string, commentId: string): Promise<CommunityComment> {
+  return request(`/community/posts/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`);
+}
 export function getPostState(id: string): Promise<{ liked: boolean; bookmarked: boolean }> {
   return request(`/community/posts/${id}/state`);
 }

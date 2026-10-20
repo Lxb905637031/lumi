@@ -20,6 +20,11 @@ export class NotificationsController {
     return this.notifications.unreadCount(user.id);
   }
 
+  @Get(':id/destination')
+  destination(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.notifications.destination(user.id, id);
+  }
+
   @Patch('read-all')
   markAllRead(@CurrentUser() user: AuthenticatedUser) {
     return this.notifications.markAllRead(user.id);

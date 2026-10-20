@@ -73,6 +73,11 @@ export class CommunityController {
     return this.community.interactionState(user.id, id);
   }
 
+  @Get('posts/:id/comments/:commentId')
+  commentDetail(@Param('id') id: string, @Param('commentId') commentId: string) {
+    return this.community.findComment(id, commentId);
+  }
+
   @Get('posts/:id')
   findOne(@Param('id') id: string) {
     return this.community.findPublic(id);

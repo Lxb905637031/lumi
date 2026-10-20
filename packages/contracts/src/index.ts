@@ -244,11 +244,12 @@ export type CreateCommentInput = { body: string };
 
 export type Notification = {
   id: string;
-  type: 'SYSTEM' | 'MODERATION' | 'GENERATION' | 'FOLLOW';
+  type: 'SYSTEM' | 'MODERATION' | 'GENERATION' | 'FOLLOW' | 'INTERACTION';
   title: string;
   body: string;
   targetType: string | null;
   targetId: string | null;
+  commentId?: string | null;
   readAt: string | null;
   createdAt: string;
 };
@@ -259,6 +260,12 @@ export type CommunityUser = {
   followed: boolean;
   createdAt: string;
 };
+
+export type NotificationDestination =
+  | { kind: 'POST'; id: string; commentId: string | null; notice: string | null }
+  | { kind: 'GENERATION_JOB'; id: string }
+  | { kind: 'FOLLOWERS' }
+  | { kind: 'UNAVAILABLE'; message: string };
 
 export type GenerationJob = {
   id: string;

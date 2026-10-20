@@ -1,4 +1,4 @@
-import type { CursorPage, Notification } from '@lumi/contracts';
+import type { CursorPage, Notification, NotificationDestination } from '@lumi/contracts';
 import { request } from '../../services/http-client';
 
 export function listNotifications(cursor?: string): Promise<CursorPage<Notification>> {
@@ -15,4 +15,8 @@ export function getUnreadNotificationCount(): Promise<{ count: number }> {
 
 export function markAllNotificationsRead() {
   return request('/notifications/read-all', { method: 'PATCH', data: {} });
+}
+
+export function getNotificationDestination(id: string): Promise<NotificationDestination> {
+  return request(`/notifications/${encodeURIComponent(id)}/destination`);
 }

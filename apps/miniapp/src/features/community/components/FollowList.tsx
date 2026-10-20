@@ -9,8 +9,8 @@ import { listFollowers, listFollowing, setFollow } from '../follows.api';
 import '../../profile/components/ProfilePanel.scss';
 
 type Mode = 'following' | 'followers';
-export function FollowList() {
-  const [mode, setMode] = useState<Mode>('following');
+export function FollowList({ initialMode = 'following' }: { initialMode?: Mode }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState<string>();
   const [busyId, setBusyId] = useState<string>();
   const fetcher = useMemo(() => (mode === 'following' ? listFollowing : listFollowers), [mode]);

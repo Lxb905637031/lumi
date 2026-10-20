@@ -7,9 +7,11 @@ import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceSt
 import { usePostDetail } from '../usePostDetail';
 import '../../feed/components/InspirationGrid.scss';
 import { FollowButton } from './FollowButton';
+import { NotificationComment } from './NotificationComment';
 import '../../profile/components/ProfilePanel.scss';
+import './PostDetail.scss';
 
-export function PostDetail({ id }: { id: string }) {
+export function PostDetail({ id, commentId }: { id: string; commentId?: string }) {
   const detail = usePostDetail(id);
   const [comment, setComment] = useState('');
   const report = async () => {
@@ -20,12 +22,22 @@ export function PostDetail({ id }: { id: string }) {
     if (choice.confirm) await detail.act('report');
   };
   return (
-    <View>
+    <View className="post-detail">
       <ResourceStatus loading={detail.loading} error={detail.error} onRetry={() => void detail.load()} />
       {detail.post && (
         <>
+          <View className="post-detail-gallery">
+            {detail.post.imagePreviews.map((preview) => (
+              <Image
+                className="post-detail-image"
+                key={preview}
+                src={preview}
+                mode="widthFix"
+                onClick={() => void Taro.previewImage({ current: preview, urls: detail.post!.imagePreviews })}
+              />
+            ))}
+          </View>
           <View className="feature-page-heading">
-            <Text className="feature-eyebrow">COMMUNITY DETAIL</Text>
             <Text className="page-title">{detail.post.title}</Text>
           </View>
           <Text className="feed-caption">
@@ -33,15 +45,7 @@ export function PostDetail({ id }: { id: string }) {
             {detail.post.isAiGenerated ? ' · AI 生成' : ''}
           </Text>
           <FollowButton userId={detail.post.authorId} />
-          {detail.post.imagePreviews.map((preview) => (
-            <Image
-              className="feed-post-image"
-              key={preview}
-              src={preview}
-              mode="aspectFit"
-              onClick={() => void Taro.previewImage({ current: preview, urls: detail.post!.imagePreviews })}
-            />
-          ))}
+          {commentId && <NotificationComment postId={id} commentId={commentId} />}
           <Text className="feed-card-body">{detail.post.body}</Text>
           <View className="feed-card-actions">
             <AppButton compact variant="secondary" disabled={detail.loading} onClick={() => void detail.act('like')}>
@@ -85,7 +89,7 @@ export function PostDetail({ id }: { id: string }) {
             onRetry={() => void detail.comments.reload()}
           />
           {detail.comments.items.map((item) => (
-            <View className="feed-composer" key={item.id}>
+            <View className="post-detail-comment" key={item.id}>
               <Text>{item.authorName}</Text>
               <Text className="feed-card-body">{item.body}</Text>
             </View>

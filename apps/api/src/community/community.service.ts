@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import type { CursorPaginationDto } from '../common/pagination/pagination.dto';
 import { MediaService } from '../media/media.service';
+import { notifyInteraction } from '../notifications/interaction-notification';
 
 type PostWithCounts = PrismaTypes.PostGetPayload<{
   include: {
@@ -59,6 +60,20 @@ export class CommunityService {
       nextCursor:
         hasNext && last ? encodeTimestampCursor({ timestamp: last.createdAt.toISOString(), id: last.id }) : null,
     };
+  }
+
+  async findComment(postId: string, commentId: string): Promise<CommunityComment> {
+    const comment = await this.prisma.comment.findFirst({
+      where: {
+        id: commentId,
+        postId,
+        moderationStatus: 'APPROVED',
+        post: { moderationStatus: 'APPROVED', deletedAt: null },
+      },
+      include: { author: { select: { id: true } } },
+    });
+    if (!comment) throw new NotFoundException('评论已删除或暂不可见');
+    return this.toComment(comment);
   }
 
   async list(
@@ -181,13 +196,21 @@ export class CommunityService {
   }
 
   async setLike(userId: string, postId: string, active: boolean) {
-    await this.assertApproved(postId);
-    if (!active) {
-      await this.prisma.postLike.deleteMany({ where: { postId, userId } });
-      return { liked: false };
-    }
-    await this.prisma.postLike.createMany({ data: [{ postId, userId }], skipDuplicates: true });
-    return { liked: true };
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM posts WHERE id = ${postId} FOR UPDATE`;
+      const post = await tx.post.findFirst({
+        where: { id: postId, moderationStatus: 'APPROVED', deletedAt: null },
+        select: { authorId: true },
+      });
+      if (!post) throw new NotFoundException('帖子不存在');
+      if (!active) {
+        await tx.postLike.deleteMany({ where: { postId, userId } });
+      } else {
+        await tx.postLike.createMany({ data: [{ postId, userId }], skipDuplicates: true });
+        await notifyInteraction(tx, { actorId: userId, recipientId: post.authorId, postId });
+      }
+      return { liked: active };
+    });
   }
 
   async setBookmark(userId: string, postId: string, active: boolean) {
@@ -275,7 +298,7 @@ export class CommunityService {
     authorId: string;
     body: string;
     createdAt: Date;
-    author: { id: string; wxOpenId: string };
+    author: { id: string };
   }): CommunityComment {
     return {
       id: comment.id,

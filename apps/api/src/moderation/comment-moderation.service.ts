@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import type { ModerationQueueQueryDto, UpdateModerationStatusDto } from './moderation.dto';
+import { notifyInteraction } from '../notifications/interaction-notification';
 
 @Injectable()
 export class CommentModerationService {
@@ -64,6 +65,19 @@ export class CommentModerationService {
             targetId: current.postId,
           },
         });
+        if (input.status === 'APPROVED') {
+          const post = await tx.post.findFirst({
+            where: { id: current.postId, moderationStatus: 'APPROVED', deletedAt: null },
+            select: { authorId: true },
+          });
+          if (post)
+            await notifyInteraction(tx, {
+              actorId: current.authorId,
+              recipientId: post.authorId,
+              postId: current.postId,
+              commentId: id,
+            });
+        }
       }
       return { id, status: input.status };
     });
