@@ -9,11 +9,12 @@ export default defineAppConfig({
     'pages/generations/index',
     'pages/messages/index',
     'pages/follows/index',
+    'pages/privacy/index',
   ],
   window: {
     navigationBarTitleText: 'Lumi',
-    navigationBarBackgroundColor: '#f7f4ef',
+    navigationBarBackgroundColor: '#f7f8f4',
     navigationBarTextStyle: 'black',
-    backgroundColor: '#f7f4ef',
+    backgroundColor: '#f7f8f4',
   },
 });

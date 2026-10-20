@@ -6,7 +6,17 @@ import { getSessionEpoch } from '../../../services/http-client';
 import { getMediaAsset } from '../media.api';
 
 /** Short-lived authorized URLs stay in memory; an expired/failed read is explicitly refreshed. */
-export function PrivateMediaImage({ assetId }: { assetId: string }) {
+type PrivateMediaImageProps = {
+  assetId: string;
+  className?: string;
+  mode?: 'scaleToFill' | 'aspectFit' | 'aspectFill' | 'widthFix' | 'heightFix';
+};
+
+export function PrivateMediaImage({
+  assetId,
+  className = 'try-on-result-image',
+  mode = 'aspectFit',
+}: PrivateMediaImageProps) {
   const [url, setUrl] = useState<string>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -40,9 +50,9 @@ export function PrivateMediaImage({ assetId }: { assetId: string }) {
     <View>
       {url && !error && (
         <Image
-          className="try-on-result-image"
+          className={className}
           src={url}
-          mode="aspectFit"
+          mode={mode}
           onError={() => setError('图片加载失败或凭证已过期，可重新读取')}
         />
       )}

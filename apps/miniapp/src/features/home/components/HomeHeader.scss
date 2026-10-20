@@ -1,44 +1,64 @@
-.home-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 12px 0 48px;
+.home-header {
+  padding: 8px 0 26px;
 }
 
-.home-eyebrow {
-  display: block;
+.home-header-brand,
+.home-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-header-brand {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.home-wordmark {
+  color: var(--lumi-color-ink);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.home-brand-divider,
+.home-brand-label {
   color: var(--lumi-color-muted);
   font-size: 22px;
-  letter-spacing: 2px;
+}
+
+.home-header-content {
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 28px;
 }
 
 .home-title {
   display: block;
   max-width: 520px;
-  margin-top: 18px;
-  font-size: 50px;
+  font-size: 42px;
   color: var(--lumi-color-ink);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .home-subtitle {
   display: block;
-  margin-top: 18px;
+  margin-top: 10px;
   color: var(--lumi-color-muted);
-  font-size: 26px;
-  line-height: 1.5;
+  font-size: 24px;
+  line-height: 1.45;
 }
 
-.home-mark {
+.home-message-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  background: var(--lumi-color-brand);
-  color: #fff7ef;
-  font-family: Georgia, serif;
-  font-size: 50px;
+  flex: 0 0 auto;
+  min-width: 84px;
+  min-height: 84px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: 10px;
+  background: var(--lumi-color-surface);
+  color: var(--lumi-color-ink);
+  font-size: 22px;
 }

@@ -6,7 +6,7 @@
   min-height: 88px;
   border: 0;
   border-radius: var(--lumi-radius-control);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 600;
   line-height: 1.2;
 }
@@ -21,12 +21,17 @@
 }
 
 .lumi-button--primary[disabled] {
-  background: #d8a394;
-  color: #fff;
+  background: #cbd4ca;
+  color: #718071;
 }
 
 .lumi-button--secondary {
   border: 1px solid var(--lumi-color-line);
   background: var(--lumi-color-surface);
   color: var(--lumi-color-ink);
+}
+
+.lumi-button--secondary:active,
+.lumi-button--primary:active {
+  opacity: 0.82;
 }

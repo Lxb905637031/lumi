@@ -4,17 +4,19 @@ import Taro from '@tarojs/taro';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
 import { hasSession } from '../../../services/http-client';
+import { getAuthErrorMessage } from '../../auth/auth-error';
 import { ensureLogin, logout } from '../../auth/auth.api';
 import './ProfilePanel.scss';
 
 const destinations = [
-  ['身材档案', '/pages/profiles/index'],
-  ['我的衣橱', '/pages/wardrobe/index'],
-  ['生成记录', '/pages/generations/index'],
-  ['我的帖子', '/pages/posts/index?collection=mine'],
-  ['我的收藏', '/pages/posts/index?collection=bookmarks'],
-  ['服务消息', '/pages/messages/index'],
-  ['关注与粉丝', '/pages/follows/index'],
+  ['人物档案', '/pages/profiles/index', '照片和参数仅用于你主动发起的试穿'],
+  ['我的衣橱', '/pages/wardrobe/index', '管理你上传的单品和衣物信息'],
+  ['试穿记录', '/pages/generations/index', '查看任务状态，确认和管理私有结果'],
+  ['我的发布', '/pages/posts/index?collection=mine', '查看草稿、审核状态和已发布内容'],
+  ['我的收藏', '/pages/posts/index?collection=bookmarks', '找回收藏的穿搭灵感'],
+  ['服务消息', '/pages/messages/index', '查看任务和内容审核通知'],
+  ['关注与粉丝', '/pages/follows/index', '管理你关注的创作者和关注关系'],
+  ['账号与隐私', '/pages/privacy/index', '申请数据导出或管理账号注销'],
 ] as const;
 
 export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
@@ -28,7 +30,7 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
       setAuthenticated(true);
       setError(undefined);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '登录失败');
+      setError(getAuthErrorMessage(reason, '登录失败，请检查网络后重试'));
     } finally {
       setBusy(false);
     }
@@ -38,7 +40,7 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
     try {
       await logout();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '服务端退出未确认，本机会话已清除');
+      setError(getAuthErrorMessage(reason, '服务端退出未确认，本机会话已清除'));
     } finally {
       setAuthenticated(false);
       setBusy(false);
@@ -46,27 +48,39 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
   };
   return (
     <View className="profile-workspace">
-      <Text className="profile-section-title">我的 Lumi</Text>
-      <Text className="profile-section-copy">管理你的私有资料、试穿结果和社区内容</Text>
+      <View className="profile-page-heading">
+        <Text className="profile-eyebrow">MY ACCOUNT</Text>
+        <Text className="profile-section-title">我的 Lumi</Text>
+        <Text className="profile-section-copy">你的私有资料、试穿记录和社区内容</Text>
+      </View>
       {error && <InlineFeedback message={error} tone="error" />}
       {!authenticated ? (
-        <AppButton loading={busy} onClick={() => void authenticate()}>
-          查看说明并登录
-        </AppButton>
+        <View className="profile-login surface">
+          <Text className="section-title">登录后管理你的衣橱</Text>
+          <Text className="section-caption">公开内容仍可浏览。人物照片和身体参数默认私有，提交前会再次确认。</Text>
+          <AppButton loading={busy} onClick={() => void authenticate()}>
+            查看说明并登录
+          </AppButton>
+        </View>
       ) : (
         <>
-          {destinations.map(([title, url]) => (
-            <View className="profile-record" key={url}>
-              <Text className="profile-record-title">{title}</Text>
-              <AppButton variant="secondary" onClick={() => void Taro.navigateTo({ url })}>
-                查看
-              </AppButton>
-            </View>
-          ))}
-          <AppButton onClick={onStartTryOn}>开始试穿</AppButton>
-          <AppButton variant="secondary" loading={busy} onClick={() => void signOut()}>
-            退出登录
-          </AppButton>
+          <View className="profile-menu-list surface">
+            {destinations.map(([title, url, description]) => (
+              <View className="profile-menu-row" key={url} role="button" onClick={() => void Taro.navigateTo({ url })}>
+                <View className="profile-menu-copy">
+                  <Text className="profile-record-title">{title}</Text>
+                  <Text className="profile-muted">{description}</Text>
+                </View>
+                <Text className="profile-menu-action">管理</Text>
+              </View>
+            ))}
+          </View>
+          <View className="profile-actions">
+            <AppButton onClick={onStartTryOn}>开始一次试穿</AppButton>
+            <AppButton variant="secondary" loading={busy} onClick={() => void signOut()}>
+              退出登录
+            </AppButton>
+          </View>
         </>
       )}
     </View>

@@ -1,1 +1,1 @@
-export type HomeTab = '推荐' | '试穿' | '我的';
+export type HomeTab = '发现' | '衣橱' | '试穿' | '我的';

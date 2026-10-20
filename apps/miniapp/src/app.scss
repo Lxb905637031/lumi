@@ -3,11 +3,69 @@
 page {
   background: var(--lumi-color-canvas);
   color: var(--lumi-color-ink);
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  font-size: 27px;
+  line-height: 1.5;
 }
 
 view,
 text,
 button {
   box-sizing: border-box;
+}
+
+button::after {
+  border: 0;
+}
+
+image {
+  display: block;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 32px var(--lumi-space-page-x) calc(128px + var(--lumi-safe-bottom));
+  box-sizing: border-box;
+}
+
+.page-title {
+  display: block;
+  color: var(--lumi-color-ink);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.page-description {
+  display: block;
+  margin-top: 10px;
+  color: var(--lumi-color-muted);
+  font-size: 24px;
+  line-height: 1.55;
+}
+
+.section-title {
+  display: block;
+  color: var(--lumi-color-ink);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.section-caption {
+  display: block;
+  margin-top: 6px;
+  color: var(--lumi-color-muted);
+  font-size: 22px;
+  line-height: 1.45;
+}
+
+.surface {
+  border: 1px solid var(--lumi-color-line);
+  border-radius: var(--lumi-radius-media);
+  background: var(--lumi-color-surface);
+}
+
+.page-section {
+  margin-top: 34px;
 }

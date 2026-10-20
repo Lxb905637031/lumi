@@ -1,5 +1,5 @@
 .inspiration-feed {
-  padding-top: 28px;
+  padding-top: 8px;
 }
 
 .feed-toolbar,
@@ -9,6 +9,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.feed-toolbar .lumi-button,
+.feed-card-actions .lumi-button {
+  width: auto;
+  min-width: 132px;
+  min-height: 68px;
+  padding: 0 18px;
+  font-size: 22px;
 }
 
 .feed-heading,
@@ -23,7 +32,7 @@
 
 .feed-heading {
   color: var(--lumi-color-ink);
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 600;
 }
 
@@ -33,14 +42,14 @@
 .feed-empty text:last-child {
   margin-top: 8px;
   color: var(--lumi-color-muted);
-  font-size: 23px;
+  font-size: 22px;
 }
 
 .feed-composer {
   margin-top: 24px;
-  padding: 22px;
+  padding: 24px;
   border: 1px solid var(--lumi-color-line);
-  border-radius: 14px;
+  border-radius: var(--lumi-radius-media);
   background: var(--lumi-color-surface);
 }
 
@@ -49,9 +58,10 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
-  padding: 16px;
+  min-height: 82px;
+  padding: 18px;
   border: 1px solid var(--lumi-color-line);
-  border-radius: 10px;
+  border-radius: var(--lumi-radius-control);
   background: #fffdfa;
   color: var(--lumi-color-ink);
   font-size: 26px;
@@ -86,13 +96,14 @@
 .inspiration-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-  padding-top: 28px;
+  gap: 14px;
+  padding-top: 24px;
 }
 
 .feed-inspiration {
   overflow: hidden;
-  border-radius: 14px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: var(--lumi-radius-media);
   background: var(--lumi-color-surface);
 }
 
@@ -109,8 +120,8 @@
 .feed-post-image {
   display: block;
   width: 100%;
-  height: 320px;
-  background: #e9e4dc;
+  height: 300px;
+  background: var(--lumi-color-surface-muted);
 }
 
 .feed-image-empty {
@@ -125,7 +136,7 @@
 }
 
 .feed-card-title {
-  padding-top: 18px;
+  padding-top: 16px;
   color: var(--lumi-color-ink);
   font-size: 27px;
   line-height: 1.4;
@@ -140,7 +151,7 @@
 
 .feed-card-meta {
   padding-top: 10px;
-  font-size: 21px;
+  font-size: 20px;
 }
 
 .feed-card-actions {

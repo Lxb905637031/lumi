@@ -1,23 +1,26 @@
 .inline-feedback {
-  margin-top: 22px;
+  margin-top: 20px;
   padding: 18px 20px;
-  border-radius: 8px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: 10px;
   font-size: 24px;
   line-height: 1.5;
   text-align: left;
 }
 
 .inline-feedback--info {
-  background: #f0ece5;
+  background: var(--lumi-color-surface-muted);
   color: var(--lumi-color-muted);
 }
 
 .inline-feedback--success {
-  background: #e8f1e7;
-  color: #356b42;
+  border-color: #cfe0d2;
+  background: #eff6ef;
+  color: var(--lumi-color-success);
 }
 
 .inline-feedback--error {
-  background: #f7e8e3;
-  color: #a33f2e;
+  border-color: #ead0c8;
+  background: #fff3f0;
+  color: var(--lumi-color-error);
 }
