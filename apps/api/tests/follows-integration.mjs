@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
+import { normalizeEnvelope } from './api-envelope.mjs';
 
 assert.notEqual(process.env.NODE_ENV, 'production');
 const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4300/api/v1';
@@ -22,7 +23,7 @@ async function request(path, token, status = 200, method = 'GET', body) {
   });
   const data = await response.json();
   assert.equal(response.status, status, `${method} ${path}: ${JSON.stringify(data)}`);
-  return data;
+  return normalizeEnvelope(data);
 }
 async function login(label) {
   const session = await request('/auth/wechat/login', undefined, 201, 'POST', {

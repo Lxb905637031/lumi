@@ -11,11 +11,22 @@ export type HealthResponse = {
   timestamp: string;
 };
 
+export type ApiMeta = { requestId: string; timestamp: string };
+
+export type ApiSuccess<T> = {
+  success: true;
+  code: 'OK';
+  message: 'OK';
+  data: T;
+  meta: ApiMeta;
+};
+
 export type ApiError = {
+  success: false;
   code: string;
   message: string;
-  requestId?: string;
-  details?: Record<string, unknown>;
+  details?: unknown;
+  meta: ApiMeta;
 };
 
 export type CursorPage<T> = {
@@ -29,6 +40,31 @@ export type AuthSession = {
   refreshTokenExpiresAt: string;
   user: { id: string; openId: string; role: UserRole };
   freeMode: boolean;
+};
+
+export type AccountDeletionStatus = 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
+
+export type AccountDeletionRequest = {
+  id: string;
+  status: AccountDeletionStatus;
+  requestedAt: string;
+  scheduledFor: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  failureCode: string | null;
+};
+
+export type DataExportStatus = 'REQUESTED' | 'PROCESSING' | 'READY' | 'EXPIRED' | 'FAILED';
+
+export type DataExportRequest = {
+  id: string;
+  status: DataExportStatus;
+  requestedAt: string;
+  processingAt: string | null;
+  readyAt: string | null;
+  expiresAt: string | null;
+  failureCode: string | null;
 };
 
 export const userRoles = ['USER', 'MODERATOR', 'ADMIN'] as const;

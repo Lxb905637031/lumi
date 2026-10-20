@@ -13,6 +13,12 @@ const config: UserConfigExport = defineConfig({
   outputRoot: 'dist',
   framework: 'react',
   compiler: 'webpack5',
+  // Taro replaces configured env values at build time. Keeping this value out
+  // of the runtime bundle is required because the WeChat JS runtime has no
+  // Node.js `process` global.
+  env: {
+    TARO_APP_API_BASE_URL: JSON.stringify(process.env.TARO_APP_API_BASE_URL ?? 'http://127.0.0.1:4300/api/v1'),
+  },
   mini: {
     postcss: {
       pxtransform: { enable: true },

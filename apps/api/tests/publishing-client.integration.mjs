@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import sharp from 'sharp';
 import { PostComposerWorkflow } from '../../miniapp/src/features/community/post-composer-workflow.ts';
 import { ApiRequestError } from '../../miniapp/src/services/api-request-error.ts';
+import { normalizeEnvelope } from './api-envelope.mjs';
 
 assert.notEqual(process.env.NODE_ENV, 'production');
 const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4300/api/v1';
@@ -27,8 +28,9 @@ async function request(path, token, method = 'GET', body) {
     signal: AbortSignal.timeout(15000),
   });
   const data = await response.json();
-  if (!response.ok) throw new ApiRequestError(data.message, response.status, data.code);
-  return data;
+  const normalized = normalizeEnvelope(data);
+  if (!response.ok) throw new ApiRequestError(normalized.message, response.status, normalized.code);
+  return normalized;
 }
 async function expectStatus(action, status) {
   await assert.rejects(action, (error) => error instanceof ApiRequestError && error.statusCode === status);

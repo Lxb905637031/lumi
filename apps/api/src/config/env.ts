@@ -85,6 +85,20 @@ class Environment {
   @Max(1000)
   FREE_TRIAL_CREDITS = 5;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(30)
+  ACCOUNT_DELETION_GRACE_DAYS = 7;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  DATA_EXPORT_TTL_HOURS = 24;
+
   @IsIn(['local', 's3'])
   MEDIA_STORAGE_DRIVER = 'local';
 

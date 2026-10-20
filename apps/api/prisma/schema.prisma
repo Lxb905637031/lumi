@@ -19,6 +19,22 @@ enum UserRole {
   ADMIN
 }
 
+enum AccountDeletionStatus {
+  REQUESTED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum DataExportStatus {
+  REQUESTED
+  PROCESSING
+  READY
+  EXPIRED
+  FAILED
+}
+
 enum GenerationJobStatus {
   QUEUED
   RUNNING
@@ -94,6 +110,8 @@ model User {
   quotaAccount             QuotaAccount?
   following               Follow[]                  @relation("Follower")
   followers               Follow[]                  @relation("Following")
+  accountDeletion          AccountDeletionRequest?
+  dataExports              DataExportRequest[]
 
   @@map("users")
 }
@@ -112,6 +130,59 @@ model UserSession {
   @@index([userId, expiresAt])
   @@index([userId, revokedAt])
   @@map("user_sessions")
+}
+
+model AccountDeletionRequest {
+  id          String                @id @default(cuid())
+  userId      String                @unique @map("user_id")
+  status      AccountDeletionStatus @default(REQUESTED)
+  requestedAt DateTime              @default(now()) @map("requested_at")
+  scheduledFor DateTime             @map("scheduled_for")
+  startedAt   DateTime?             @map("started_at")
+  completedAt DateTime?             @map("completed_at")
+  cancelledAt DateTime?             @map("cancelled_at")
+  failureCode String?               @map("failure_code")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events      AccountDeletionEvent[]
+
+  @@index([status, scheduledFor])
+  @@map("account_deletion_requests")
+}
+
+model AccountDeletionEvent {
+  id         String                @id @default(cuid())
+  requestId  String                @map("request_id")
+  fromStatus AccountDeletionStatus? @map("from_status")
+  toStatus   AccountDeletionStatus @map("to_status")
+  actorType  String                @map("actor_type")
+  actorId    String?               @map("actor_id")
+  metadata   Json?
+  createdAt  DateTime              @default(now()) @map("created_at")
+  request    AccountDeletionRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, createdAt])
+  @@map("account_deletion_events")
+}
+
+model DataExportRequest {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  status      DataExportStatus @default(REQUESTED)
+  requestedAt DateTime         @default(now()) @map("requested_at")
+  processingAt DateTime?       @map("processing_at")
+  readyAt     DateTime?        @map("ready_at")
+  expiresAt   DateTime?        @map("expires_at")
+  failureCode String?          @map("failure_code")
+  payload     Json?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("data_export_requests")
 }
 
 model AdminCredential {

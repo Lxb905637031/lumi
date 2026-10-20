@@ -5,6 +5,7 @@
   "scripts": {
     "dev:weapp": "taro build --type weapp --watch",
     "build": "taro build --type weapp",
+    "build:device": "node ../../scripts/build-miniapp-device.mjs",
     "typecheck": "tsc -p tsconfig.test.json --noEmit",
     "test": "tsx --test tests/*.spec.ts"
   },

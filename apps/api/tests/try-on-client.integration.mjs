@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import sharp from 'sharp';
 import { TryOnWorkflow } from '../../miniapp/src/features/try-on/try-on-workflow.ts';
 import { ApiRequestError } from '../../miniapp/src/services/api-request-error.ts';
+import { normalizeEnvelope } from './api-envelope.mjs';
 
 // Exercises the actual miniapp workflow against HTTP. It deliberately does not claim Taro runtime/UI acceptance.
 assert.notEqual(process.env.NODE_ENV, 'production');
@@ -32,8 +33,9 @@ async function request(path, method = 'GET', body) {
     signal: AbortSignal.timeout(15_000),
   });
   const data = await response.json();
-  if (!response.ok) throw new ApiRequestError(data.message ?? 'HTTP failure', response.status, data.code);
-  return data;
+  const normalized = normalizeEnvelope(data);
+  if (!response.ok) throw new ApiRequestError(normalized.message ?? 'HTTP failure', response.status, normalized.code);
+  return normalized;
 }
 async function upload(bytes) {
   const reservation = await request('/media/assets/uploads', 'POST', {

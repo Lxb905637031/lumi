@@ -1,0 +1,6 @@
+# Optional LAN access for signed uploads and image reads during phone debugging.
+# Existing loopback access is retained by Compose's port merge.
+services:
+  seaweedfs:
+    ports:
+      - '${LUMI_DEVICE_HOST:?Set LUMI_DEVICE_HOST to the computer LAN IPv4 address}:59000:8333'

@@ -3,6 +3,7 @@ import { randomBytes, randomUUID, scrypt } from 'node:crypto';
 import { promisify } from 'node:util';
 import { PrismaClient } from '@prisma/client';
 import sharp from 'sharp';
+import { normalizeEnvelope } from './api-envelope.mjs';
 
 const baseUrl = process.env.LUMI_API_URL ?? 'http://127.0.0.1:4300/api/v1';
 assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(new URL(baseUrl).hostname), 'Smoke tests are local-only');
@@ -21,7 +22,7 @@ async function request(path, expectedStatus = 200, init = {}) {
   });
   const body = await response.json();
   assert.equal(response.status, expectedStatus, path + ': ' + JSON.stringify(body));
-  return body;
+  return normalizeEnvelope(body);
 }
 
 function write(method, headers, data = {}) {

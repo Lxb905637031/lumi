@@ -17,6 +17,7 @@ import { MediaModule } from './media/media.module';
 import { CommunityModule } from './community/community.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OperationsModule } from './operations/operations.module';
+import { AccountPrivacyModule } from './account-privacy/account-privacy.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { OperationsModule } from './operations/operations.module';
     CommunityModule,
     NotificationsModule,
     OperationsModule,
+    AccountPrivacyModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

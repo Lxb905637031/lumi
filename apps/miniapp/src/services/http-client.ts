@@ -1,5 +1,5 @@
 import Taro from '@tarojs/taro';
-import type { ApiError } from '@lumi/contracts';
+import type { ApiError, ApiSuccess, AuthSession } from '@lumi/contracts';
 import { ApiRequestError } from './api-request-error';
 
 const API_BASE_URL = process.env.TARO_APP_API_BASE_URL ?? 'http://127.0.0.1:4300/api/v1';
@@ -38,7 +38,7 @@ export function hasSession(): boolean {
 }
 
 async function requestOnce<T>(path: string, options: Omit<Taro.request.Option, 'url'>, accessToken: string) {
-  return Taro.request<T | ApiError>({
+  return Taro.request<ApiSuccess<T> | ApiError>({
     url: `${API_BASE_URL}${path}`,
     timeout: 15_000,
     ...options,
@@ -50,25 +50,29 @@ async function requestOnce<T>(path: string, options: Omit<Taro.request.Option, '
   });
 }
 
+function readError(body: ApiError | unknown, statusCode: number): ApiRequestError {
+  const error = body as Partial<ApiError>;
+  const message = Array.isArray(error.message)
+    ? error.message.join('；')
+    : error.message || `请求失败（${statusCode}）`;
+  return new ApiRequestError(message, statusCode, error.code);
+}
+
 let refreshInFlight: Promise<string> | undefined;
 
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) throw new Error('登录状态已失效，请重新登录');
-  refreshInFlight ??= requestOnce<{ accessToken: string; refreshToken: string }>(
-    '/auth/refresh',
-    { method: 'POST', data: { refreshToken } },
-    '',
-  )
+  refreshInFlight ??= requestOnce<AuthSession>('/auth/refresh', { method: 'POST', data: { refreshToken } }, '')
     .then((response) => {
-      if (response.statusCode >= 400) {
+      const body = response.data as ApiSuccess<AuthSession> | ApiError;
+      if (response.statusCode >= 400 || !body.success) {
         if ([400, 401, 403].includes(response.statusCode)) clearSession();
-        throw new Error(response.statusCode >= 500 ? '登录服务暂时不可用，请重试' : '登录状态已失效，请重新登录');
+        throw readError(body, response.statusCode);
       }
-      const body = response.data as { accessToken: string; refreshToken: string };
-      saveAccessToken(body.accessToken);
-      saveRefreshToken(body.refreshToken);
-      return body.accessToken;
+      saveAccessToken(body.data.accessToken);
+      saveRefreshToken(body.data.refreshToken);
+      return body.data.accessToken;
     })
     .finally(() => {
       refreshInFlight = undefined;
@@ -86,12 +90,9 @@ export async function request<T>(path: string, options: Omit<Taro.request.Option
   }
 
   if (response.statusCode >= 400) {
-    const body = response.data as ApiError;
-    throw new ApiRequestError(
-      Array.isArray(body?.message) ? body.message.join('；') : (body?.message ?? `请求失败（${response.statusCode}）`),
-      response.statusCode,
-      body?.code,
-    );
+    throw readError(response.data, response.statusCode);
   }
-  return response.data as T;
+  const body = response.data as ApiSuccess<T> | ApiError;
+  if (!body.success) throw readError(body, response.statusCode);
+  return body.data;
 }

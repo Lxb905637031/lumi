@@ -29,6 +29,8 @@ pnpm dev:api
 
 API health check: `http://localhost:4300/api/v1/health`.
 
+For phone debugging, use [the WeChat device setup](docs/operations/WECHAT-DEVICE-DEBUGGING.md) and `pnpm --filter @lumi/miniapp build:device`. Both the API address and signed media URLs must be reachable from the phone.
+
 The zero-budget development mode is enabled by `FREE_MODE=true`. It disables payment and allows the AI generation provider to be a local or mock implementation. A real public deployment still needs a stable HTTPS endpoint, storage, backups, moderation and model capacity.
 
 The admin console uses account/password login and real API data; it no longer uses a build-time token or preview fixtures. Provision a local account with `LUMI_ADMIN_USERNAME` and a self-generated `LUMI_ADMIN_PASSWORD` (12–256 characters) when running `pnpm --filter @lumi/api db:seed`, then start `pnpm dev:admin`. Never commit a real password. Password changes through this local provisioning command revoke previous sessions. The seed command is an explicit operator action, not an automatic production bootstrap.

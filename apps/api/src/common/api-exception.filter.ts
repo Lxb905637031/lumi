@@ -1,0 +1,51 @@
+import { ArgumentsHost, Catch, HttpException, HttpStatus, Logger, type ExceptionFilter } from '@nestjs/common';
+import type { FastifyReply, FastifyRequest } from 'fastify';
+import { meta, requestId, type ApiFailure } from './api-response';
+
+const statusCodes: Record<number, string> = {
+  [HttpStatus.BAD_REQUEST]: 'VALIDATION_ERROR',
+  [HttpStatus.UNAUTHORIZED]: 'AUTHENTICATION_REQUIRED',
+  [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
+  [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+  [HttpStatus.CONFLICT]: 'CONFLICT',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'RATE_LIMITED',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
+};
+
+@Catch()
+export class ApiExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ApiExceptionFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    const http = host.switchToHttp();
+    const request = http.getRequest<FastifyRequest>();
+    const reply = http.getResponse<FastifyReply>();
+    const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    const raw = exception instanceof HttpException ? exception.getResponse() : undefined;
+    const body = typeof raw === 'string' ? { message: raw } : raw && typeof raw === 'object' ? raw : {};
+    const messageValue = 'message' in body ? body.message : undefined;
+    const message = Array.isArray(messageValue)
+      ? messageValue.join('；')
+      : typeof messageValue === 'string'
+        ? messageValue
+        : status >= 500
+          ? '服务暂时不可用，请稍后重试'
+          : '请求无法完成';
+    const details = Array.isArray(messageValue)
+      ? { issues: messageValue }
+      : 'details' in body
+        ? body.details
+        : undefined;
+    const code =
+      'code' in body && typeof body.code === 'string' ? body.code : (statusCodes[status] ?? 'INTERNAL_SERVER_ERROR');
+    if (status >= 500) this.logger.error(exception instanceof Error ? exception.stack : String(exception));
+    const failure: ApiFailure = {
+      success: false,
+      code,
+      message,
+      ...(details === undefined ? {} : { details }),
+      meta: meta(requestId(request, reply)),
+    };
+    reply.status(status).send(failure);
+  }
+}
