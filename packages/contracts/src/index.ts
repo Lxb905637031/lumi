@@ -73,6 +73,9 @@ export type UserRole = (typeof userRoles)[number];
 export const moderationStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'REMOVED'] as const;
 export type ModerationStatus = (typeof moderationStatuses)[number];
 
+export const reportStatuses = ['OPEN', 'RESOLVED', 'REJECTED'] as const;
+export type ReportStatus = (typeof reportStatuses)[number];
+
 export type ModerationQueueItem = {
   id: string;
   title: string;
@@ -81,6 +84,19 @@ export type ModerationQueueItem = {
   status: ModerationStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ReportQueueItem = {
+  id: string;
+  postId: string;
+  postTitle: string;
+  postPreview: string;
+  reporterId: string;
+  reason: string;
+  status: ReportStatus;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolutionReason: string | null;
 };
 
 export type BodyProfileVersion = {

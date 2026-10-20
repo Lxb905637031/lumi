@@ -1,4 +1,4 @@
-import type { CursorPage, ModerationQueueItem, ModerationStatus } from '@lumi/contracts';
+import type { CursorPage, ModerationQueueItem, ModerationStatus, ReportQueueItem, ReportStatus } from '@lumi/contracts';
 import { adminRequest, apiUrl } from './admin-session';
 
 export const moderationApiConfig = {
@@ -53,6 +53,19 @@ export function updateCommentModerationStatus(
   return adminRequest(`/admin/moderation/comments/${commentId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status, reason }),
+  });
+}
+
+export function listModerationReports(status: ReportStatus = 'OPEN', cursor?: string) {
+  const params = new URLSearchParams({ status, limit: '20' });
+  if (cursor) params.set('cursor', cursor);
+  return adminRequest<CursorPage<ReportQueueItem>>(`/admin/moderation/reports?${params.toString()}`);
+}
+
+export function updateReportStatus(id: string, status: Exclude<ReportStatus, 'OPEN'>, reason: string) {
+  return adminRequest<ReportQueueItem>(`/admin/moderation/reports/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, reason: reason.trim() }),
   });
 }
 

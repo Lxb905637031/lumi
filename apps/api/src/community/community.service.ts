@@ -1,13 +1,14 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { Prisma as PrismaTypes } from '@prisma/client';
 import type { CommunityComment, CommunityPost, CreateCommunityPostInput, CursorPage } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import type { CursorPaginationDto } from '../common/pagination/pagination.dto';
 import { MediaService } from '../media/media.service';
 
-type PostWithCounts = Prisma.PostGetPayload<{
+type PostWithCounts = PrismaTypes.PostGetPayload<{
   include: {
     author: { select: { id: true; wxOpenId: true } };
     _count: { select: { likes: true; comments: { where: { moderationStatus: 'APPROVED' } }; bookmarks: true } };
@@ -216,9 +217,19 @@ export class CommunityService {
 
   async report(userId: string, postId: string, reason: string) {
     await this.assertApproved(postId);
-    const existing = await this.prisma.postReport.findFirst({ where: { postId, reporterId: userId, status: 'OPEN' } });
-    if (existing) throw new ConflictException('你已经举报过该内容');
-    await this.prisma.postReport.create({ data: { postId, reporterId: userId, reason } });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM posts WHERE id = ${postId} FOR UPDATE`;
+        const existing = await tx.postReport.findFirst({ where: { postId, reporterId: userId, status: 'OPEN' } });
+        if (existing) throw new ConflictException('你已经举报过该内容');
+        await tx.postReport.create({ data: { postId, reporterId: userId, reason } });
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('你已经举报过该内容');
+      }
+      throw error;
+    }
     return { success: true };
   }
 
@@ -230,7 +241,7 @@ export class CommunityService {
     if (!post) throw new NotFoundException('帖子不存在');
   }
 
-  private readImageIds(imageAssetIds: Prisma.JsonValue): string[] {
+  private readImageIds(imageAssetIds: PrismaTypes.JsonValue): string[] {
     return Array.isArray(imageAssetIds) ? imageAssetIds.filter((id): id is string => typeof id === 'string') : [];
   }
 

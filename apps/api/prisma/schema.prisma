@@ -104,6 +104,7 @@ model User {
   likes                    PostLike[]
   bookmarks                PostBookmark[]
   reports                  PostReport[]
+  resolvedReports          PostReport[]             @relation("ReportResolver")
   notifications            Notification[]
   commentModerationActions CommentModerationAction[]
   adminCredential          AdminCredential?
@@ -492,15 +493,18 @@ model PostBookmark {
 }
 
 model PostReport {
-  id         String       @id @default(cuid())
-  postId     String       @map("post_id")
-  reporterId String       @map("reporter_id")
-  reason     String
-  status     ReportStatus @default(OPEN)
-  createdAt  DateTime     @default(now()) @map("created_at")
-  resolvedAt DateTime?    @map("resolved_at")
-  post       Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
-  reporter   User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  id               String       @id @default(cuid())
+  postId           String       @map("post_id")
+  reporterId       String       @map("reporter_id")
+  resolvedById     String?      @map("resolved_by_id")
+  reason           String
+  status           ReportStatus @default(OPEN)
+  resolutionReason String?      @map("resolution_reason")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  resolvedAt       DateTime?    @map("resolved_at")
+  post             Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter         User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  resolvedBy       User?        @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([postId, createdAt])

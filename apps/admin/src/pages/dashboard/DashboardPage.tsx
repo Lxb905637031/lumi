@@ -2,6 +2,7 @@ import { AdminShell } from '../../components/admin-shell/AdminShell';
 import { MetricCard, type Metric } from '../../components/metric-card/MetricCard';
 import { ReviewQueue } from '../../features/moderation/ReviewQueue';
 import { CommentReviewQueue } from '../../features/moderation/CommentReviewQueue';
+import { ReportReviewQueue } from '../../features/moderation/ReportReviewQueue';
 import { getAdminOverview, type AdminOverview } from '../../services/moderation-api';
 import { logoutAdmin } from '../../services/admin-session';
 import { useEffect, useState } from 'react';
@@ -34,6 +35,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
       </section>
       <ReviewQueue />
       <CommentReviewQueue />
+      <ReportReviewQueue />
     </AdminShell>
   );
 }

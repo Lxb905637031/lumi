@@ -401,6 +401,37 @@ try {
   await request('/community/comments/' + comment.id, 404, { method: 'DELETE', headers: outsiderAuth });
   await request('/community/posts/' + post.id + '/reports', 201, write('POST', ownerAuth, { reason: 'OTHER' }));
   await request('/community/posts/' + post.id + '/reports', 409, write('POST', ownerAuth, { reason: 'OTHER' }));
+  await request('/admin/moderation/reports', 403, { headers: ownerAuth });
+  await request('/admin/moderation/reports?status=INVALID', 400, { headers: adminAuth });
+  const reportQueue = await request('/admin/moderation/reports?status=OPEN&limit=5', 200, { headers: adminAuth });
+  const report = reportQueue.items.find((item) => item.postId === post.id && item.reporterId === owner.user.id);
+  assert.ok(report, 'Admin queue includes the persisted report');
+  await request(
+    '/admin/moderation/reports/' + report.id + '/status',
+    400,
+    write('PATCH', adminAuth, { status: 'RESOLVED' }),
+  );
+  const decisionRequest = () =>
+    fetch(baseUrl + '/admin/moderation/reports/' + report.id + '/status', {
+      ...write('PATCH', adminAuth, { status: 'RESOLVED', reason: 'Content removed after review' }),
+      headers: { 'content-type': 'application/json', ...adminAuth },
+      signal: AbortSignal.timeout(15_000),
+    });
+  const decisions = await Promise.all([decisionRequest(), decisionRequest()]);
+  assert.deepEqual(decisions.map((response) => response.status).sort(), [200, 409]);
+  const resolution = normalizeEnvelope(await decisions.find((response) => response.status === 200).json());
+  assert.equal(resolution.status, 'RESOLVED');
+  assert.equal(resolution.resolutionReason, 'Content removed after review');
+  assert.equal(
+    await prisma.postReport.count({ where: { id: report.id, resolvedById: admin.id, status: 'RESOLVED' } }),
+    1,
+  );
+  await request('/community/posts/' + post.id + '/reports', 201, write('POST', ownerAuth, { reason: 'OTHER' }));
+  const reportNotifications = await request('/notifications?limit=20', 200, { headers: ownerAuth });
+  assert.ok(reportNotifications.items.some((item) => item.targetType === 'REPORT' && item.targetId === report.id));
+  passed.push(
+    'report queue RBAC, DTO validation, atomic resolution, audit metadata, reporter notification and re-report after closure',
+  );
   await request('/community/comments/' + comment.id, 200, { method: 'DELETE', headers: ownerAuth });
   assert.equal((await request('/community/posts/' + post.id)).commentCount, 0);
   passed.push('comment moderation isolation, filtered counts, audits, deletion and report submission');
