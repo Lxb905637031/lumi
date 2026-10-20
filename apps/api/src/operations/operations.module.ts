@@ -4,10 +4,12 @@ import { RolesGuard } from '../common/roles.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { OperationsController } from './operations.controller';
 import { OperationsService } from './operations.service';
+import { RuntimeConfigController } from './runtime-config.controller';
+import { RuntimeConfigService } from './runtime-config.service';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [OperationsController],
-  providers: [AuthGuard, RolesGuard, OperationsService],
+  controllers: [OperationsController, RuntimeConfigController],
+  providers: [AuthGuard, RolesGuard, OperationsService, RuntimeConfigService],
 })
 export class OperationsModule {}

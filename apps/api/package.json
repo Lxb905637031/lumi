@@ -20,6 +20,7 @@
     "test:announcements": "node --env-file-if-exists=../../.env tests/announcements.integration.mjs",
     "test:user-moderation": "node --env-file-if-exists=../../.env tests/user-moderation.integration.mjs",
     "test:media-moderation": "node --env-file-if-exists=../../.env tests/media-moderation.integration.mjs",
+    "test:runtime-config": "node --env-file-if-exists=../../.env tests/runtime-config.integration.mjs",
     "test:account-privacy": "node --env-file-if-exists=../../.env tests/account-privacy-integration.mjs",
     "storage:init-local": "node --env-file-if-exists=../../.env scripts/init-local-storage.mjs",
     "db:generate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js generate --schema prisma/schema.prisma",

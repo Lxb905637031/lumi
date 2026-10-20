@@ -623,6 +623,20 @@ model AnnouncementRecipient {
   @@map("announcement_recipients")
 }
 
+model RuntimeConfig {
+  id          String   @id @default(cuid())
+  configKey   String   @map("config_key")
+  version     Int
+  value       Json
+  reason      String
+  actorId     String   @map("actor_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([configKey, version])
+  @@index([configKey, createdAt])
+  @@map("runtime_configs")
+}
+
 model Follow {
   id          String   @id @default(cuid())
   followerId  String   @map("follower_id")
