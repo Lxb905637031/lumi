@@ -1,0 +1,59 @@
+.challenge-list {
+  margin-top: 22px;
+  padding: 18px 0;
+  border-top: 1px solid var(--lumi-color-line);
+  border-bottom: 1px solid var(--lumi-color-line);
+}
+
+.challenge-list__heading,
+.challenge-list__item,
+.challenge-list__copy {
+  display: flex;
+}
+
+.challenge-list__heading,
+.challenge-list__item {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.challenge-list__heading {
+  margin-bottom: 12px;
+}
+
+.challenge-list__title,
+.challenge-list__name,
+.challenge-list__description,
+.challenge-list__meta,
+.challenge-list__caption {
+  display: block;
+}
+
+.challenge-list__title,
+.challenge-list__name {
+  color: var(--lumi-color-ink);
+  font-size: 25px;
+  font-weight: 600;
+}
+
+.challenge-list__caption,
+.challenge-list__description,
+.challenge-list__meta {
+  color: var(--lumi-color-muted);
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.challenge-list__copy {
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.challenge-list__item + .challenge-list__item {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--lumi-color-line);
+}

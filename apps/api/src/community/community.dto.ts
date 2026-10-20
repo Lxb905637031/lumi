@@ -42,6 +42,11 @@ export class CreatePostDto {
   @IsOptional()
   @IsBoolean()
   isAiGenerated?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Length(3, 80)
+  challengeSlug?: string;
 }
 
 export class SetInteractionDto {

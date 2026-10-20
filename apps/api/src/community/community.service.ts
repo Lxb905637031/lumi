@@ -166,6 +166,7 @@ export class CommunityService {
       title: input.title.trim(),
       body: input.body.trim(),
       topic: input.topic?.trim() || null,
+      challengeSlug: input.challengeSlug?.trim() || null,
       imageAssetIds,
       isAiGenerated: input.isAiGenerated ?? false,
     };
@@ -192,6 +193,20 @@ export class CommunityService {
         select: { id: true, generationOutputs: { select: { deletedAt: true, selectedAt: true } } },
       });
       if (assets.length !== imageAssetIds.length) throw new NotFoundException('帖子图片不存在');
+      let challengeId: string | null = null;
+      if (content.challengeSlug) {
+        const lockedChallenges = await tx.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM challenges WHERE slug = ${content.challengeSlug} FOR UPDATE
+        `;
+        if (!lockedChallenges.length) throw new ConflictException('挑战当前不可投稿');
+        const challenge = await tx.challenge.findUnique({ where: { id: lockedChallenges[0]!.id } });
+        if (!challenge || challenge.status !== 'PUBLISHED') throw new ConflictException('挑战当前不可投稿');
+        const participant = await tx.challengeParticipant.findUnique({
+          where: { challengeId_userId: { challengeId: challenge.id, userId } },
+        });
+        if (!participant || participant.leftAt) throw new ConflictException('请先参加挑战再投稿');
+        challengeId = challenge.id;
+      }
       const generated = assets.flatMap((asset) => asset.generationOutputs);
       if (generated.some((output) => output.deletedAt || !output.selectedAt))
         throw new ConflictException('请先确认生成结果再发布');
@@ -202,6 +217,7 @@ export class CommunityService {
           body: content.body,
           imageAssetIds,
           topic: content.topic,
+          challengeId,
           idempotencyKey: input.idempotencyKey,
           requestHash,
           isAiGenerated: generated.length > 0 || (input.isAiGenerated ?? false),
@@ -306,6 +322,7 @@ export class CommunityService {
       title: post.title,
       body: post.body,
       topic: post.topic,
+      challengeId: post.challengeId,
       imageAssetIds,
       imagePreviews,
       isAiGenerated: post.isAiGenerated,

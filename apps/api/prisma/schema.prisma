@@ -71,6 +71,13 @@ enum ReportStatus {
   REJECTED
 }
 
+enum ChallengeStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
 enum MediaStatus {
   PENDING
   PROCESSING
@@ -131,6 +138,8 @@ model User {
   dataExports              DataExportRequest[]
   announcements            Announcement[]           @relation("AnnouncementAuthor")
   announcementRecipients   AnnouncementRecipient[]
+  createdChallenges        Challenge[]              @relation("ChallengeCreator")
+  challengeParticipants    ChallengeParticipant[]
 
   @@map("users")
 }
@@ -457,6 +466,7 @@ model Post {
   requestHash       String?            @map("request_hash")
   imageAssetIds     Json               @default("[]") @map("image_asset_ids")
   topic             String?
+  challengeId       String?            @map("challenge_id")
   isAiGenerated     Boolean            @default(false) @map("is_ai_generated")
   featuredAt        DateTime?          @map("featured_at")
   moderationStatus  ModerationStatus   @default(PENDING) @map("moderation_status")
@@ -469,13 +479,47 @@ model Post {
   likes             PostLike[]
   bookmarks         PostBookmark[]
   reports           PostReport[]
+  challenge         Challenge?         @relation(fields: [challengeId], references: [id], onDelete: SetNull)
 
   @@index([moderationStatus, createdAt])
   @@index([topic, moderationStatus, createdAt])
+  @@index([challengeId, moderationStatus, createdAt])
   @@index([authorId, createdAt])
   @@unique([authorId, idempotencyKey])
   @@index([imageAssetIds], type: Gin)
   @@map("posts")
+}
+
+model Challenge {
+  id          String                @id @default(cuid())
+  slug        String                @unique
+  title       String
+  description String
+  status      ChallengeStatus       @default(DRAFT)
+  startsAt    DateTime              @map("starts_at")
+  endsAt      DateTime              @map("ends_at")
+  createdById String                @map("created_by_id")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  creator     User                  @relation("ChallengeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  posts       Post[]
+  participants ChallengeParticipant[]
+
+  @@index([status, startsAt, endsAt])
+  @@map("challenges")
+}
+
+model ChallengeParticipant {
+  challengeId String    @map("challenge_id")
+  userId      String    @map("user_id")
+  joinedAt    DateTime  @default(now()) @map("joined_at")
+  leftAt      DateTime? @map("left_at")
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId])
+  @@index([userId, leftAt, joinedAt])
+  @@map("challenge_participants")
 }
 
 model ModerationAction {

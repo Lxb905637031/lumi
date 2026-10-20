@@ -1,4 +1,10 @@
-import type { CommunityComment, CommunityPost, CreateCommunityPostInput, CursorPage } from '@lumi/contracts';
+import type {
+  CommunityChallenge,
+  CommunityComment,
+  CommunityPost,
+  CreateCommunityPostInput,
+  CursorPage,
+} from '@lumi/contracts';
 import { request } from '../../services/http-client';
 
 export function listCommunityPosts(
@@ -16,6 +22,24 @@ export function listCommunityPosts(
 export function listCommunityTopics(search?: string): Promise<{ items: string[] }> {
   const query = search ? `?search=${encodeURIComponent(search)}` : '';
   return request(`/community/topics${query}`);
+}
+
+export function listChallenges(): Promise<CommunityChallenge[]> {
+  return request('/challenges');
+}
+
+export function getChallengeParticipation(slug: string): Promise<{ active: boolean; joinedAt: string | null }> {
+  return request(`/challenges/${encodeURIComponent(slug)}/participation`);
+}
+
+export function setChallengeParticipation(slug: string, active: boolean) {
+  return request<{ active: boolean; joinedAt: string | null }>(
+    `/challenges/${encodeURIComponent(slug)}/participation`,
+    {
+      method: 'PUT',
+      data: { active },
+    },
+  );
 }
 
 export function createCommunityPost(input: CreateCommunityPostInput): Promise<CommunityPost> {

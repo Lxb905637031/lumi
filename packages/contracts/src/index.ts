@@ -239,6 +239,7 @@ export type CommunityPost = {
   title: string;
   body: string;
   topic: string | null;
+  challengeId: string | null;
   imageAssetIds: string[];
   imagePreviews: string[];
   isAiGenerated: boolean;
@@ -259,7 +260,19 @@ export type CreateCommunityPostInput = {
   body: string;
   imageAssetIds: string[];
   topic?: string;
+  challengeSlug?: string;
   isAiGenerated?: boolean;
+};
+
+export type CommunityChallenge = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
+  startsAt: string;
+  endsAt: string;
+  participantCount: number;
 };
 
 export type CommunityComment = {

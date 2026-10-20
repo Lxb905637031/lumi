@@ -87,3 +87,7 @@ jobs:
           LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:announcements
           LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:user-moderation
           LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:interaction-notifications
+          LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:media-moderation
+          LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:runtime-config
+          LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:community-discovery
+          LUMI_API_URL=http://127.0.0.1:4300/api/v1 pnpm --filter @lumi/api test:challenges

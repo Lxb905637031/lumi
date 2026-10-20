@@ -20,6 +20,7 @@ import { OperationsModule } from './operations/operations.module';
 import { AccountPrivacyModule } from './account-privacy/account-privacy.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { UserModerationModule } from './user-moderation/user-moderation.module';
+import { ChallengesModule } from './challenges/challenges.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { UserModerationModule } from './user-moderation/user-moderation.module';
     AccountPrivacyModule,
     AnnouncementsModule,
     UserModerationModule,
+    ChallengesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
