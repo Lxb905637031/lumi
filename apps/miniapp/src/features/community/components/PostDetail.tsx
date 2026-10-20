@@ -9,7 +9,6 @@ import '../../feed/components/InspirationGrid.scss';
 import { FollowButton } from './FollowButton';
 import { NotificationComment } from './NotificationComment';
 import '../../profile/components/ProfilePanel.scss';
-import './PostDetail.scss';
 
 export function PostDetail({ id, commentId }: { id: string; commentId?: string }) {
   const detail = usePostDetail(id);
@@ -22,22 +21,12 @@ export function PostDetail({ id, commentId }: { id: string; commentId?: string }
     if (choice.confirm) await detail.act('report');
   };
   return (
-    <View className="post-detail">
+    <View>
       <ResourceStatus loading={detail.loading} error={detail.error} onRetry={() => void detail.load()} />
       {detail.post && (
         <>
-          <View className="post-detail-gallery">
-            {detail.post.imagePreviews.map((preview) => (
-              <Image
-                className="post-detail-image"
-                key={preview}
-                src={preview}
-                mode="widthFix"
-                onClick={() => void Taro.previewImage({ current: preview, urls: detail.post!.imagePreviews })}
-              />
-            ))}
-          </View>
           <View className="feature-page-heading">
+            <Text className="feature-eyebrow">COMMUNITY DETAIL</Text>
             <Text className="page-title">{detail.post.title}</Text>
           </View>
           <Text className="feed-caption">
@@ -46,6 +35,15 @@ export function PostDetail({ id, commentId }: { id: string; commentId?: string }
           </Text>
           <FollowButton userId={detail.post.authorId} />
           {commentId && <NotificationComment postId={id} commentId={commentId} />}
+          {detail.post.imagePreviews.map((preview) => (
+            <Image
+              className="feed-post-image"
+              key={preview}
+              src={preview}
+              mode="aspectFit"
+              onClick={() => void Taro.previewImage({ current: preview, urls: detail.post!.imagePreviews })}
+            />
+          ))}
           <Text className="feed-card-body">{detail.post.body}</Text>
           <View className="feed-card-actions">
             <AppButton compact variant="secondary" disabled={detail.loading} onClick={() => void detail.act('like')}>
@@ -89,7 +87,7 @@ export function PostDetail({ id, commentId }: { id: string; commentId?: string }
             onRetry={() => void detail.comments.reload()}
           />
           {detail.comments.items.map((item) => (
-            <View className="post-detail-comment" key={item.id}>
+            <View className="feed-composer" key={item.id}>
               <Text>{item.authorName}</Text>
               <Text className="feed-card-body">{item.body}</Text>
             </View>
