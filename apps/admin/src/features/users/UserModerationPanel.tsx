@@ -23,20 +23,23 @@ export function UserModerationPanel() {
   const historyCursors = useRef<Record<string, string | null>>({});
   const listCursor = useRef<string | null>(null);
 
-  const load = useCallback(async (append = false) => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      const page = await listAdminUsers(status, role, search, append ? listCursor.current ?? undefined : undefined);
-      listCursor.current = page.nextCursor;
-      setNextCursor(page.nextCursor);
-      setItems((current) => (append ? [...current, ...page.items] : page.items));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '用户列表读取失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [role, search, status]);
+  const load = useCallback(
+    async (append = false) => {
+      setLoading(true);
+      setError(undefined);
+      try {
+        const page = await listAdminUsers(status, role, search, append ? (listCursor.current ?? undefined) : undefined);
+        listCursor.current = page.nextCursor;
+        setNextCursor(page.nextCursor);
+        setItems((current) => (append ? [...current, ...page.items] : page.items));
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : '用户列表读取失败');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [role, search, status],
+  );
 
   useEffect(() => {
     listCursor.current = null;
@@ -87,7 +90,10 @@ export function UserModerationPanel() {
   const showHistory = async (id: string, append = false) => {
     setError(undefined);
     try {
-      const actions = await listUserModerationActions(id, append ? historyCursors.current[id] ?? undefined : undefined);
+      const actions = await listUserModerationActions(
+        id,
+        append ? (historyCursors.current[id] ?? undefined) : undefined,
+      );
       historyCursors.current[id] = actions.nextCursor;
       setHistory((current) => ({
         ...current,

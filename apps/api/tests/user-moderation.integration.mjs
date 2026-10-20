@@ -63,7 +63,10 @@ try {
   assert.ok(listed);
   assert.equal(listed.status, 'ACTIVE');
   assert.equal(typeof listed.postCount, 'number');
-  const roleFiltered = await request(`/admin/users?status=ACTIVE&role=ADMIN&search=${admin.user.id}`, admin.accessToken);
+  const roleFiltered = await request(
+    `/admin/users?status=ACTIVE&role=ADMIN&search=${admin.user.id}`,
+    admin.accessToken,
+  );
   assert.equal(roleFiltered.items.length, 1);
   assert.equal(roleFiltered.items[0].role, 'ADMIN');
   await request('/admin/users?limit=100', admin.accessToken, 400);
