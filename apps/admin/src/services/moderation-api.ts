@@ -6,17 +6,23 @@ export const moderationApiConfig = {
   apiUrl: apiUrl(),
 };
 
-export function listModerationPosts(): Promise<CursorPage<ModerationQueueItem>> {
-  return adminRequest('/admin/moderation/posts?limit=20');
+export function listModerationPosts(
+  status: ModerationStatus = 'PENDING',
+  cursor?: string,
+): Promise<CursorPage<ModerationQueueItem>> {
+  const params = new URLSearchParams({ status, limit: '20' });
+  if (cursor) params.set('cursor', cursor);
+  return adminRequest(`/admin/moderation/posts?${params.toString()}`);
 }
 
 export function updateModerationStatus(
   postId: string,
   status: Exclude<ModerationStatus, 'PENDING'>,
+  reason = '',
 ): Promise<ModerationQueueItem> {
   return adminRequest(`/admin/moderation/posts/${postId}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, reason: reason.trim() || undefined }),
   });
 }
 

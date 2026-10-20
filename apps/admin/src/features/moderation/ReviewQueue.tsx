@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ModerationQueueItem, ModerationStatus } from '@lumi/contracts';
 import { listModerationPosts, updateModerationStatus } from '../../services/moderation-api';
 
@@ -28,32 +28,42 @@ export function ReviewQueue() {
 
 function QueueContent() {
   const [items, setItems] = useState<ModerationQueueItem[]>([]);
+  const [status, setStatus] = useState<ModerationStatus>('PENDING');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [updatingId, setUpdatingId] = useState<string>();
 
-  useEffect(() => {
-    let active = true;
-    void listModerationPosts()
-      .then((page) => {
-        if (active) setItems(page.items);
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : '审核队列加载失败');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const load = useCallback(
+    async (next?: string, append = false) => {
+      setLoading(true);
+      setError(undefined);
+      try {
+        const page = await listModerationPosts(status, next);
+        setItems((current) => (append ? [...current, ...page.items] : page.items));
+        setCursor(next);
+        setNextCursor(page.nextCursor ?? null);
+      } catch (reason: unknown) {
+        setError(reason instanceof Error ? reason.message : '审核队列加载失败');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [status],
+  );
 
-  const handleStatusChange = async (id: string, status: Exclude<ModerationStatus, 'PENDING'>) => {
+  useEffect(() => {
+    void load().catch(() => undefined);
+  }, [load]);
+
+  const handleStatusChange = async (id: string, nextStatus: Exclude<ModerationStatus, 'PENDING'>) => {
+    const reason = window.prompt(nextStatus === 'APPROVED' ? '通过说明（可留空）' : '处理原因（必填）', '');
+    if (reason === null || (nextStatus !== 'APPROVED' && !reason.trim())) return;
     setUpdatingId(id);
     setError(undefined);
     try {
-      const updated = await updateModerationStatus(id, status);
+      const updated = await updateModerationStatus(id, nextStatus, reason);
       setItems((current) => current.map((item) => (item.id === id ? updated : item)));
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : '审核操作失败');
@@ -65,10 +75,31 @@ function QueueContent() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold" id="review-queue-title">
-          审核队列
-        </h2>
-        <span className="text-sm text-lumi-muted">{loading ? '加载中' : `${items.length} 条`}</span>
+        <div>
+          <h2 className="text-xl font-semibold" id="review-queue-title">
+            审核队列
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(['PENDING', 'APPROVED', 'REJECTED', 'REMOVED'] as const).map((value) => (
+              <button
+                className={`rounded-md border px-3 py-2 text-xs font-medium ${status === value ? 'border-lumi-ink bg-lumi-ink text-white' : 'border-lumi-line'}`}
+                key={value}
+                onClick={() => setStatus(value)}
+              >
+                {statusLabels[value]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-lumi-muted">{loading ? '加载中' : `${items.length} 条`}</span>
+          <button
+            className="rounded-md border border-lumi-line px-3 py-2 text-xs font-medium"
+            onClick={() => void load(cursor)}
+          >
+            刷新
+          </button>
+        </div>
       </div>
       {error && (
         <p className="mt-4 border-l-2 border-lumi-brand bg-lumi-brand-soft px-3 py-2 text-sm text-lumi-brand">
@@ -79,6 +110,15 @@ function QueueContent() {
         <p className="mt-4 py-8 text-sm text-lumi-muted">正在读取服务端审核队列…</p>
       ) : (
         <ServerTable items={items} updatingId={updatingId} onStatusChange={handleStatusChange} />
+      )}
+      {nextCursor && (
+        <button
+          className="mt-4 w-full rounded-md border border-lumi-line px-4 py-3 text-sm disabled:opacity-50"
+          disabled={loading}
+          onClick={() => void load(nextCursor, true)}
+        >
+          加载更多审核内容
+        </button>
       )}
     </>
   );
@@ -138,6 +178,14 @@ function ServerTable({
                       {actionLabels.REJECTED}
                     </button>
                   </div>
+                ) : item.status === 'APPROVED' ? (
+                  <button
+                    className="rounded-md border border-lumi-line px-3 py-2 text-xs font-medium disabled:opacity-50"
+                    disabled={updatingId === item.id}
+                    onClick={() => void onStatusChange(item.id, 'REMOVED')}
+                  >
+                    下架
+                  </button>
                 ) : (
                   <span className="text-xs text-lumi-muted">已处理</span>
                 )}
