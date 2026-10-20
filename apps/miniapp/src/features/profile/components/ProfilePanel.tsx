@@ -46,6 +46,12 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
       setBusy(false);
     }
   };
+  const openDestination = (url: string) => {
+    if (url === '/pages/wardrobe/index') {
+      return Taro.switchTab({ url });
+    }
+    return Taro.navigateTo({ url });
+  };
   return (
     <View className="profile-workspace">
       <View className="profile-page-heading">
@@ -66,7 +72,7 @@ export function ProfilePanel({ onStartTryOn }: { onStartTryOn: () => void }) {
         <>
           <View className="profile-menu-list surface">
             {destinations.map(([title, url, description]) => (
-              <View className="profile-menu-row" key={url} role="button" onClick={() => void Taro.navigateTo({ url })}>
+              <View className="profile-menu-row" key={url} role="button" onClick={() => void openDestination(url)}>
                 <View className="profile-menu-copy">
                   <Text className="profile-record-title">{title}</Text>
                   <Text className="profile-muted">{description}</Text>

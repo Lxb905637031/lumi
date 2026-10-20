@@ -85,7 +85,7 @@
 | Input             | single / multiline / picker             | 默认、聚焦、错误、禁用、只读 | 业务 feature 表单                             |
 | Surface           | plain / outlined / media                | 默认、按下、选中、只读       | feature SCSS 的 `surface` 规则                |
 | ResourceStatus    | loading / empty / error                 | 首次空、筛选空、可恢复错误   | `components/ui/ResourceStatus`                |
-| BottomNavigation  | discovery / wardrobe / try-on / profile | 默认、选中、按下             | `features/home/components/BottomNavigation`   |
+| TabBar            | discovery / wardrobe / try-on / profile | 默认、选中、按下             | `app.config.ts` 原生微信 `tabBar`              |
 | PrivateMediaImage | private / public                        | 加载、失败、重试、过期       | `features/media/components/PrivateMediaImage` |
 
 ## 禁止项
