@@ -83,6 +83,10 @@ try {
   });
   challengeId = created.id;
   await request(`/admin/challenges/${challengeId}/publish`, admin.accessToken, 201, 'POST');
+  await request('/admin/challenges?status=NOT_A_STATUS', admin.accessToken, 400);
+  const adminPage = await request(`/admin/challenges?status=PUBLISHED&limit=1`, admin.accessToken);
+  assert.equal(adminPage.items[0].id, challengeId);
+  await request('/admin/challenges', owner.accessToken, 403);
   await request('/community/posts', owner.accessToken, 409, 'POST', {
     idempotencyKey: `challenge-before-join-${runId}`,
     title: 'Not joined yet',
@@ -109,6 +113,24 @@ try {
   });
   postId = post.id;
   assert.equal(post.challengeId, challengeId);
+  const challengeReview = await request(
+    `/admin/moderation/posts?status=PENDING&challengeId=${challengeId}`,
+    admin.accessToken,
+  );
+  assert.deepEqual(
+    challengeReview.items.map((item) => item.id),
+    [postId],
+  );
+  assert.equal(
+    (await request(`/admin/challenges?status=PUBLISHED`, admin.accessToken)).items.find(
+      (item) => item.id === challengeId,
+    ).pendingPostCount,
+    1,
+  );
+  await request(`/admin/moderation/posts/${postId}/status`, admin.accessToken, 200, 'PATCH', {
+    status: 'APPROVED',
+    reason: 'Challenge submission approved',
+  });
   await request(`/challenges/${created.slug}/participation`, owner.accessToken, 409, 'PUT', { active: false });
   await request(`/admin/challenges/${challengeId}/close`, admin.accessToken, 200, 'PATCH');
   console.log(
@@ -120,6 +142,7 @@ try {
           'admin-only operations and regular-user authorization rejection',
           'real signed local object upload and media ownership',
           'posting rejected before participation and accepted after join',
+          'admin challenge pagination, challenge-scoped moderation queue and audited review action',
           'idempotent participation and exit protection after submission',
         ],
         mode: 'Real loopback HTTP/PostgreSQL with disposable media and users; no external services',

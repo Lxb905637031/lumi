@@ -18,6 +18,7 @@ export class ModerationService {
     const posts = await this.prisma.post.findMany({
       where: {
         ...(query.status ? { moderationStatus: query.status } : {}),
+        ...(query.challengeId ? { challengeId: query.challengeId } : {}),
         ...(cursor
           ? {
               OR: [

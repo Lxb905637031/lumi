@@ -13,6 +13,10 @@ export class ModerationQueueQueryDto extends CursorPaginationDto {
   @IsOptional()
   @IsIn(Object.values(ModerationStatusEnum))
   status?: ModerationStatus;
+
+  @IsOptional()
+  @IsString()
+  challengeId?: string;
 }
 
 export class UpdateModerationStatusDto {

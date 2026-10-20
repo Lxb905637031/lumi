@@ -9,6 +9,7 @@ import { AnnouncementComposer } from '../../features/announcements/AnnouncementC
 import { UserModerationPanel } from '../../features/users/UserModerationPanel';
 import { MediaReviewQueue } from '../../features/moderation/MediaReviewQueue';
 import { useEffect, useState } from 'react';
+import { ChallengeOperations } from '../../features/challenges/ChallengeOperations';
 
 export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [overview, setOverview] = useState<AdminOverview>();
@@ -42,6 +43,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
       <ReportReviewQueue />
       <AnnouncementComposer />
       <UserModerationPanel />
+      <ChallengeOperations />
     </AdminShell>
   );
 }

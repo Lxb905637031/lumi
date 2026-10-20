@@ -18,10 +18,49 @@ export const moderationApiConfig = {
 export function listModerationPosts(
   status: ModerationStatus = 'PENDING',
   cursor?: string,
+  challengeId?: string,
 ): Promise<CursorPage<ModerationQueueItem>> {
   const params = new URLSearchParams({ status, limit: '20' });
   if (cursor) params.set('cursor', cursor);
+  if (challengeId) params.set('challengeId', challengeId);
   return adminRequest(`/admin/moderation/posts?${params.toString()}`);
+}
+
+export type AdminChallenge = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
+  startsAt: string;
+  endsAt: string;
+  participantCount: number;
+  pendingPostCount: number;
+};
+
+export function listAdminChallenges(status?: AdminChallenge['status'], cursor?: string) {
+  const params = new URLSearchParams({ limit: '20' });
+  if (status) params.set('status', status);
+  if (cursor) params.set('cursor', cursor);
+  return adminRequest<CursorPage<AdminChallenge>>(`/admin/challenges?${params.toString()}`);
+}
+
+export function createAdminChallenge(input: {
+  slug: string;
+  title: string;
+  description: string;
+  startsAt: string;
+  endsAt: string;
+}) {
+  return adminRequest<AdminChallenge>('/admin/challenges', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function publishAdminChallenge(id: string) {
+  return adminRequest<AdminChallenge>(`/admin/challenges/${id}/publish`, { method: 'POST' });
+}
+
+export function closeAdminChallenge(id: string) {
+  return adminRequest<AdminChallenge>(`/admin/challenges/${id}/close`, { method: 'PATCH' });
 }
 
 export function updateModerationStatus(

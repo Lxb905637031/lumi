@@ -1,4 +1,12 @@
-import { IsBoolean, IsDateString, IsString, Length, Matches } from 'class-validator';
+import { ChallengeStatus } from '@prisma/client';
+import { IsBoolean, IsDateString, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { CursorPaginationDto } from '../common/pagination/pagination.dto';
+
+export class AdminChallengeQueryDto extends CursorPaginationDto {
+  @IsOptional()
+  @IsIn(Object.values(ChallengeStatus))
+  status?: ChallengeStatus;
+}
 
 export class CreateChallengeDto {
   @IsString()

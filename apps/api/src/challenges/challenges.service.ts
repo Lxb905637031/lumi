@@ -1,7 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import type { CreateChallengeDto } from './challenges.dto';
+import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
+import type { AdminChallengeQueryDto, CreateChallengeDto } from './challenges.dto';
+import type { CommunityChallenge, CursorPage } from '@lumi/contracts';
 
 @Injectable()
 export class ChallengesService {
@@ -15,6 +17,43 @@ export class ChallengesService {
       include: { _count: { select: { participants: { where: { leftAt: null } } } } },
     });
     return rows.map((row) => this.toContract(row));
+  }
+
+  async listAdmin(
+    query: AdminChallengeQueryDto,
+  ): Promise<CursorPage<CommunityChallenge & { pendingPostCount: number }>> {
+    const cursor = decodeTimestampCursor(query.cursor);
+    const rows = await this.prisma.challenge.findMany({
+      where: {
+        ...(query.status ? { status: query.status } : {}),
+        ...(cursor
+          ? {
+              OR: [
+                { createdAt: { lt: new Date(cursor.timestamp) } },
+                { createdAt: new Date(cursor.timestamp), id: { lt: cursor.id } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: query.limit + 1,
+      include: {
+        _count: {
+          select: {
+            participants: { where: { leftAt: null } },
+            posts: { where: { deletedAt: null, moderationStatus: 'PENDING' } },
+          },
+        },
+      },
+    });
+    const hasNextPage = rows.length > query.limit;
+    const items = (hasNextPage ? rows.slice(0, query.limit) : rows).map((row) => this.toAdminContract(row));
+    const last = rows.at(Math.min(rows.length, query.limit) - 1);
+    return {
+      items,
+      nextCursor:
+        hasNextPage && last ? encodeTimestampCursor({ timestamp: last.createdAt.toISOString(), id: last.id }) : null,
+    };
   }
 
   async get(slug: string) {
@@ -143,5 +182,18 @@ export class ChallengesService {
       endsAt: row.endsAt.toISOString(),
       participantCount: row._count?.participants ?? 0,
     };
+  }
+
+  private toAdminContract(row: {
+    id: string;
+    slug: string;
+    title: string;
+    description: string;
+    status: 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED';
+    startsAt: Date;
+    endsAt: Date;
+    _count: { participants: number; posts: number };
+  }) {
+    return { ...this.toContract(row), pendingPostCount: row._count.posts };
   }
 }
