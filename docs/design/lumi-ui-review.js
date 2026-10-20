@@ -636,7 +636,7 @@ function render() {
       )
       .join(
         '',
-      )}</nav><div class="board-heading"><h2>${groups[section] || groups.core}</h2><p>${section === 'admin' ? '10 个运营页面' : section === 'core' ? '同任务 · 同内容 · 不同信息密度' : '点击“放大查看”审阅单页，页面内容可滚动'}</p></div>${section === 'admin' ? `<div class="admin-grid">${(adminId ? [adminId] : adminTitles.map((_, i) => i + 1)).map(adminScreen).join('')}</div>` : `<div class="screen-grid">${selected.map((s) => screenCard(s)).join('')}</div>`}<footer class="review-footer"><span>参考：Whering 衣橱组织 / Pinterest 内容发现 / Indyx 衣橱与编辑层级<br>保留 Lumi 任务：建档 → 选衣 → 审阅 → 试穿 → 确认 → 保存 / 审核发布</span><span>32 张小程序页面与状态图 · 10 张后台图<br>2026.10.20 · 设计审阅稿，非微信运行时验收</span></footer></div>`;
+      )}</nav><div class="board-heading"><h2>${groups[section] || groups.core}</h2><p>${section === 'admin' ? '10 个运营页面' : section === 'core' ? '同任务 · 同内容 · 不同信息密度' : '点击“放大查看”审阅单页，页面内容可滚动'}</p></div>${section === 'admin' ? `<div class="admin-grid">${(adminId ? [adminId] : adminTitles.map((_, i) => i + 1)).map(adminScreen).join('')}</div>` : `<div class="screen-grid">${selected.map((s) => screenCard(s)).join('')}</div>`}<footer class="review-footer"><span>参考：Whering 衣橱组织 / Pinterest 内容发现 / Indyx 衣橱与编辑层级<br>保留 Lumi 任务：建档 → 选衣 → 审阅 → 试穿 → 确认 → 保存 / 审核发布</span><span>32 个小程序页面 · 1 个发现页空态变体 · 10 个后台页面<br>2026.10.20 · 设计审阅稿，非微信运行时验收</span></footer></div>`;
 }
 render();
 const dialog = document.getElementById('screen-dialog');

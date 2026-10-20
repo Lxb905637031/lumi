@@ -43,7 +43,7 @@
 - 参考原则来自 Whering 的数字衣橱组织、Pinterest 的内容发现、Indyx 的衣橱/编辑层级；不复制品牌字标、摄影、配色或专有组件。
 - Unsplash 图片只是布局素材；人物与试穿结果明确标注为“效果示意”，不代表真实模型能力。
 - 示例数据固定写在评审板中；真实图片、额度、任务、审核、消息和隐私请求仍需接入服务端。
-- 32 张图覆盖关键页面和状态，不等于所有状态组合。生产实现仍需补齐 loading、empty、error、permission denied、submitting、success、stale response 和微信真机验收。
+- 32 个小程序页面加 1 个发现页空态变体，覆盖关键页面和状态，不等于所有状态组合。生产实现仍需补齐 loading、empty、error、permission denied、submitting、success、stale response 和微信真机验收。
 - 发现页空态不再使用孤立提示框：必须说明公开内容为空的原因，并提供“查看我的衣橱”和“开始一次试穿”两个业务下一步；这是设计要求，不代表接口已经提供真实推荐数据。
 
 ## 评审后的实施顺序
