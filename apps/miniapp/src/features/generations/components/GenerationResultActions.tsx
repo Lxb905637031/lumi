@@ -16,34 +16,40 @@ type Props = {
 export function GenerationResultActions({ job, output, busy, onAction }: Props) {
   const localPreview = job.provider === 'local-svg';
   return (
-    <View className="profile-record">
+    <View className="generation-result-card surface">
       <PrivateMediaImage assetId={output.assetId} />
-      <Text>{output.selectedAt ? '已确认结果' : '待确认结果'}</Text>
+      <Text className="generation-result-title">{output.selectedAt ? '已确认结果' : '待确认结果'}</Text>
       <Text className="profile-muted">{output.savedAt ? '已云端保存（非手机相册）' : '默认私有，未云端保存'}</Text>
       {localPreview && <InlineFeedback message="本地 SVG 开发预览，不是真实 AI，不提供相册下载或好友分享。" />}
-      <AppButton disabled={busy || !!output.selectedAt} variant="secondary" onClick={() => onAction(output, 'select')}>
-        {output.selectedAt ? '已确认' : '确认此结果'}
-      </AppButton>
-      <AppButton
-        disabled={busy || (!output.savedAt && !output.selectedAt)}
-        variant="secondary"
-        onClick={() => onAction(output, output.savedAt ? 'unsave' : 'save')}
-      >
-        {output.savedAt ? '取消云端保存' : '云端保存'}
-      </AppButton>
-      <AppButton
-        disabled={busy || !output.selectedAt}
-        onClick={() =>
-          void Taro.navigateTo({
-            url: `/pages/publish/index?jobId=${encodeURIComponent(job.id)}&outputId=${encodeURIComponent(output.id)}`,
-          })
-        }
-      >
-        编辑并提交社区审核
-      </AppButton>
-      <AppButton disabled={busy} variant="secondary" onClick={() => onAction(output, 'delete')}>
-        删除此结果
-      </AppButton>
+      <View className="generation-result-actions">
+        <AppButton
+          disabled={busy || !!output.selectedAt}
+          variant="secondary"
+          onClick={() => onAction(output, 'select')}
+        >
+          {output.selectedAt ? '已确认' : '确认此结果'}
+        </AppButton>
+        <AppButton
+          disabled={busy || (!output.savedAt && !output.selectedAt)}
+          variant="secondary"
+          onClick={() => onAction(output, output.savedAt ? 'unsave' : 'save')}
+        >
+          {output.savedAt ? '取消云端保存' : '云端保存'}
+        </AppButton>
+        <AppButton
+          disabled={busy || !output.selectedAt}
+          onClick={() =>
+            void Taro.navigateTo({
+              url: `/pages/publish/index?jobId=${encodeURIComponent(job.id)}&outputId=${encodeURIComponent(output.id)}`,
+            })
+          }
+        >
+          编辑并提交社区审核
+        </AppButton>
+        <AppButton disabled={busy} variant="secondary" onClick={() => onAction(output, 'delete')}>
+          删除此结果
+        </AppButton>
+      </View>
     </View>
   );
 }

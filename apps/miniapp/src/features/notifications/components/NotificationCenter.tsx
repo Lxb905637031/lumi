@@ -38,9 +38,13 @@ export function NotificationCenter() {
   };
   return (
     <View>
-      <Text className="profile-section-title">服务消息</Text>
+      <View className="feature-page-heading">
+        <Text className="feature-eyebrow">UPDATES</Text>
+        <Text className="page-title">服务消息</Text>
+        <Text className="page-description">任务、审核和社区互动的状态更新。</Text>
+      </View>
       <AppButton variant="secondary" onClick={() => void markAll()}>
-        全部已读
+        全部标记为已读
       </AppButton>
       <ResourceStatus
         loading={list.loading}

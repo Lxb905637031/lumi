@@ -69,3 +69,16 @@ image {
 .page-section {
   margin-top: 34px;
 }
+
+.feature-page-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 26px;
+}
+
+.feature-eyebrow {
+  color: var(--lumi-color-muted);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}

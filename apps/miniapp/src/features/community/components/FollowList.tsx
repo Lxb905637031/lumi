@@ -6,6 +6,7 @@ import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeed
 import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceStatus';
 import { useCursorList } from '../../../hooks/useCursorList';
 import { listFollowers, listFollowing, setFollow } from '../follows.api';
+import '../../profile/components/ProfilePanel.scss';
 
 type Mode = 'following' | 'followers';
 export function FollowList() {
@@ -34,35 +35,42 @@ export function FollowList() {
     }
   };
   return (
-    <View className="profile-section">
-      <View className="feed-card-actions">
-        <AppButton variant={mode === 'following' ? 'primary' : 'secondary'} onClick={() => switchMode('following')}>
-          我关注的
-        </AppButton>
-        <AppButton variant={mode === 'followers' ? 'primary' : 'secondary'} onClick={() => switchMode('followers')}>
-          关注我的
-        </AppButton>
+    <View>
+      <View className="feature-page-heading">
+        <Text className="feature-eyebrow">YOUR PEOPLE</Text>
+        <Text className="page-title">关注与粉丝</Text>
+        <Text className="page-description">管理你关注的创作者和与你产生连接的人。</Text>
       </View>
-      {error && <InlineFeedback message={error} tone="error" />}
-      <ResourceStatus
-        loading={list.loading}
-        error={list.error}
-        empty={!list.items.length}
-        onRetry={() => void list.reload()}
-      />
-      {list.items.map((user) => (
-        <View className="profile-record" key={user.id}>
-          <Text>{user.displayName}</Text>
-          <AppButton variant="secondary" loading={busyId === user.id} onClick={() => void toggle(user)}>
-            {user.followed ? '取消关注' : '回关'}
+      <View className="profile-section">
+        <View className="feed-card-actions">
+          <AppButton variant={mode === 'following' ? 'primary' : 'secondary'} onClick={() => switchMode('following')}>
+            我关注的
+          </AppButton>
+          <AppButton variant={mode === 'followers' ? 'primary' : 'secondary'} onClick={() => switchMode('followers')}>
+            关注我的
           </AppButton>
         </View>
-      ))}
-      {list.hasMore && (
-        <AppButton variant="secondary" onClick={() => void list.loadMore()}>
-          更多
-        </AppButton>
-      )}
+        {error && <InlineFeedback message={error} tone="error" />}
+        <ResourceStatus
+          loading={list.loading}
+          error={list.error}
+          empty={!list.items.length}
+          onRetry={() => void list.reload()}
+        />
+        {list.items.map((user) => (
+          <View className="profile-record" key={user.id}>
+            <Text>{user.displayName}</Text>
+            <AppButton variant="secondary" loading={busyId === user.id} onClick={() => void toggle(user)}>
+              {user.followed ? '取消关注' : '回关'}
+            </AppButton>
+          </View>
+        ))}
+        {list.hasMore && (
+          <AppButton variant="secondary" onClick={() => void list.loadMore()}>
+            更多
+          </AppButton>
+        )}
+      </View>
     </View>
   );
 }

@@ -7,6 +7,7 @@ import type { PostSource } from '../post-composer-workflow';
 import { PostComposerFields } from './PostComposerFields';
 import { PostImagePicker } from './PostImagePicker';
 import '../../feed/components/InspirationGrid.scss';
+import '../../profile/components/ProfilePanel.scss';
 
 export function PostComposer({ source }: { source?: PostSource }) {
   const { state, workflow } = usePostComposer(source);
@@ -31,6 +32,11 @@ export function PostComposer({ source }: { source?: PostSource }) {
     );
   return (
     <View className="feed-composer">
+      <View className="feature-page-heading">
+        <Text className="feature-eyebrow">COMMUNITY</Text>
+        <Text className="page-title">发布一套穿搭</Text>
+        <Text className="page-description">公开发布前会经过审核，身体参数和私有资料不会公开。</Text>
+      </View>
       {!state.ready && (
         <AppButton loading={state.busy} onClick={() => void workflow.prepare()}>
           {source ? '读取已确认结果并编辑' : '登录并开始编辑'}

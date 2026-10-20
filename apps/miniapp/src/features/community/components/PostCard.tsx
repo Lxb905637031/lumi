@@ -3,13 +3,26 @@ import type { CommunityPost } from '@lumi/contracts';
 import Taro from '@tarojs/taro';
 import '../../feed/components/InspirationGrid.scss';
 
-export function PostCard({ post }: { post: CommunityPost }) {
+export function PostCard({
+  post,
+  mediaVariant = 'standard',
+}: {
+  post: CommunityPost;
+  mediaVariant?: 'standard' | 'portrait';
+}) {
   return (
     <View
       className="feed-inspiration"
       onClick={() => void Taro.navigateTo({ url: '/pages/post/index?id=' + encodeURIComponent(post.id) })}
     >
-      {post.imagePreviews[0] && <Image className="feed-post-image" src={post.imagePreviews[0]} mode="aspectFill" />}
+      {post.imagePreviews[0] && (
+        <Image
+          className={`feed-post-image feed-post-image--${mediaVariant}`}
+          src={post.imagePreviews[0]}
+          mode="aspectFill"
+          lazyLoad
+        />
+      )}
       <Text className="feed-card-title">{post.title}</Text>
       <Text className="feed-card-body">{post.body}</Text>
       <Text className="feed-card-meta">

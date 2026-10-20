@@ -16,6 +16,7 @@ import {
 } from '../generations.api';
 import { getSessionEpoch } from '../../../services/http-client';
 import { GenerationResultActions } from './GenerationResultActions';
+import '../../profile/components/ProfilePanel.scss';
 
 const statusLabels: Record<GenerationJob['status'], string> = {
   QUEUED: '排队中',
@@ -94,7 +95,11 @@ export function GenerationHistory({ selectedId }: { selectedId?: string }) {
   };
   return (
     <View>
-      <Text className="profile-section-title">生成记录</Text>
+      <View className="feature-page-heading">
+        <Text className="feature-eyebrow">PRIVATE RESULTS</Text>
+        <Text className="page-title">试穿记录</Text>
+        <Text className="page-description">先确认结果，再选择云端保存或提交社区审核。</Text>
+      </View>
       <ResourceStatus
         loading={list.loading}
         error={list.error}
@@ -120,7 +125,7 @@ export function GenerationHistory({ selectedId }: { selectedId?: string }) {
       )}
       {selected && (
         <View className="profile-section">
-          <Text>{statusLabels[selected.status]}</Text>
+          <Text className="section-title">{statusLabels[selected.status]}</Text>
           <Text className="profile-muted">提供方：{selected.provider}，本地预览不是实际 AI 试穿。</Text>
           {selected.status === 'SUCCEEDED' && !selected.outputs.length && (
             <InlineFeedback message="无可用结果，已删除的结果不会重新出现。" />

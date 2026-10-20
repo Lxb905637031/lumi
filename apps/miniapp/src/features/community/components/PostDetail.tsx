@@ -7,6 +7,7 @@ import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceSt
 import { usePostDetail } from '../usePostDetail';
 import '../../feed/components/InspirationGrid.scss';
 import { FollowButton } from './FollowButton';
+import '../../profile/components/ProfilePanel.scss';
 
 export function PostDetail({ id }: { id: string }) {
   const detail = usePostDetail(id);
@@ -23,7 +24,10 @@ export function PostDetail({ id }: { id: string }) {
       <ResourceStatus loading={detail.loading} error={detail.error} onRetry={() => void detail.load()} />
       {detail.post && (
         <>
-          <Text className="feed-heading">{detail.post.title}</Text>
+          <View className="feature-page-heading">
+            <Text className="feature-eyebrow">COMMUNITY DETAIL</Text>
+            <Text className="page-title">{detail.post.title}</Text>
+          </View>
           <Text className="feed-caption">
             {detail.post.authorName}
             {detail.post.isAiGenerated ? ' · AI 生成' : ''}

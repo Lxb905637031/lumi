@@ -223,3 +223,23 @@
 .profile-read {
   background: var(--lumi-color-line);
 }
+
+.generation-result-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.generation-result-title {
+  display: block;
+  color: var(--lumi-color-ink);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.generation-result-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}

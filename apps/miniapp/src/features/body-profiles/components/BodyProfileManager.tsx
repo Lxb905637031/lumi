@@ -32,10 +32,16 @@ export function BodyProfileManager() {
   };
   return (
     <View>
-      <Text className="profile-section-title">身材档案</Text>
-      <Text className="profile-hint">
-        参数均可不填；照片建议使用光线均匀、无明显遮挡的正面全身照。生成效果不保证尺码合身。
-      </Text>
+      <View className="feature-page-heading">
+        <Text className="feature-eyebrow">PRIVATE PROFILE</Text>
+        <Text className="page-title">人物档案</Text>
+        <Text className="page-description">保存你的照片和尺寸版本，只在你主动发起试穿时使用。</Text>
+      </View>
+      <View className="profile-section">
+        <Text className="profile-hint">
+          参数均可不填；照片建议使用光线均匀、无明显遮挡的正面全身照。生成效果不保证尺码合身。
+        </Text>
+      </View>
       <ResourceStatus
         loading={list.loading}
         error={list.error}

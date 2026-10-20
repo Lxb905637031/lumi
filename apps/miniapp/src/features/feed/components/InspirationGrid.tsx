@@ -27,9 +27,19 @@ export function InspirationGrid() {
         onRetry={() => void feed.reload()}
       />
       <View className="inspiration-grid">
-        {feed.items.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        {[feed.items.filter((_, index) => index % 2 === 0), feed.items.filter((_, index) => index % 2 === 1)].map(
+          (column, columnIndex) => (
+            <View className="inspiration-column" key={columnIndex}>
+              {column.map((post, index) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  mediaVariant={(index + columnIndex) % 3 === 0 ? 'portrait' : 'standard'}
+                />
+              ))}
+            </View>
+          ),
+        )}
       </View>
       {feed.hasMore && (
         <AppButton loading={feed.loading} variant="secondary" onClick={() => void feed.loadMore()}>

@@ -5,6 +5,7 @@ import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceSt
 import { useCursorList } from '../../../hooks/useCursorList';
 import { listBookmarks, listMyPosts, removePost } from '../community.api';
 import { PostCard } from './PostCard';
+import '../../profile/components/ProfilePanel.scss';
 
 export function PostCollection({ collection }: { collection: 'mine' | 'bookmarks' }) {
   const list = useCursorList(collection === 'mine' ? listMyPosts : listBookmarks);
@@ -21,7 +22,13 @@ export function PostCollection({ collection }: { collection: 'mine' | 'bookmarks
   const statusNames = { PENDING: '审核中', APPROVED: '已公开', REJECTED: '已拒绝', REMOVED: '已下架' };
   return (
     <View>
-      <Text className="feed-heading">{collection === 'mine' ? '我的帖子' : '我的收藏'}</Text>
+      <View className="feature-page-heading">
+        <Text className="feature-eyebrow">COMMUNITY</Text>
+        <Text className="page-title">{collection === 'mine' ? '我的发布' : '我的收藏'}</Text>
+        <Text className="page-description">
+          {collection === 'mine' ? '草稿、审核状态和已发布内容都在这里继续。' : '留住你想再次尝试的穿搭灵感。'}
+        </Text>
+      </View>
       <ResourceStatus
         loading={list.loading}
         error={list.error}
@@ -29,7 +36,7 @@ export function PostCollection({ collection }: { collection: 'mine' | 'bookmarks
         onRetry={() => void list.reload()}
       />
       {list.items.map((post) => (
-        <View className="feed-composer" key={post.id}>
+        <View className="post-collection-item" key={post.id}>
           {post.moderationStatus === 'APPROVED' ? <PostCard post={post} /> : <Text>{post.title}</Text>}
           <Text className="feed-caption">{statusNames[post.moderationStatus]}</Text>
           {collection === 'mine' && (
