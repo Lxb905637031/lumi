@@ -201,6 +201,12 @@ try {
     201,
     write('POST', ownerAuth, { name: 'Smoke Top', category: 'TOP', assetId: image.id }),
   );
+  assert.deepEqual(
+    Object.keys(clothing).sort(),
+    ['assetId', 'category', 'color', 'createdAt', 'id', 'name', 'style', 'updatedAt', 'userId'].sort(),
+  );
+  assert.equal(typeof clothing.createdAt, 'string');
+  assert.equal('deletedAt' in clothing, false);
   const updatedClothing = await request(
     '/wardrobe/items/' + clothing.id,
     200,
@@ -212,6 +218,8 @@ try {
     }),
   );
   assert.equal(updatedClothing.color, 'white');
+  assert.equal(updatedClothing.name, 'Updated Top');
+  assert.equal('deletedAt' in updatedClothing, false);
   await request('/wardrobe/items/' + clothing.id, 404, { headers: outsiderAuth });
   await request(
     '/wardrobe/items/' + clothing.id,
