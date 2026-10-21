@@ -25,7 +25,7 @@ function workflowFor(source?: PostSource) {
         key: () => `post-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         choose: async (count) =>
           (await Taro.chooseImage({ count, sizeType: ['compressed'], sourceType: ['album', 'camera'] })).tempFilePaths,
-        upload: async (path) => ({ id: (await uploadImage(path)).id, preview: path }),
+        upload: async (path, onProgress) => ({ id: (await uploadImage(path, onProgress)).id, preview: path }),
         source: async (input) => {
           const job = await getGeneration(input.jobId);
           const output = job.outputs.find((result) => result.id === input.outputId && result.selectedAt);

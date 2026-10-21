@@ -1,6 +1,7 @@
 import { Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
+import { MediaUploadStatus } from '../../media/components/MediaUploadStatus';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
 import { usePostComposer } from '../usePostComposer';
 import type { PostSource } from '../post-composer-workflow';
@@ -53,6 +54,7 @@ export function PostComposer({ source }: { source?: PostSource }) {
             onRemove={(id) => workflow.removeAsset(id)}
             onAdd={() => void workflow.addImages()}
           />
+          <MediaUploadStatus progress={state.uploadProgress} />
           {state.pending && (
             <InlineFeedback message="发布结果尚未确认，内容和原请求标识已保留。继续原发布不会重复创建，请勿换账号或重建内容。" />
           )}

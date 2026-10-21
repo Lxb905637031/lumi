@@ -1,5 +1,6 @@
 import type { CommunityPost, CreateCommunityPostInput } from '@lumi/contracts';
 import { ApiRequestError } from '../../services/api-request-error';
+import type { MediaUploadProgress } from '../media/media.api';
 
 export type PostSource = { jobId: string; outputId: string };
 export type DraftAsset = { id: string; preview: string };
@@ -12,13 +13,14 @@ export type ComposerState = {
   post?: CommunityPost;
   error?: string;
   remainingUploads: number;
+  uploadProgress?: MediaUploadProgress;
 };
 export type ComposerApi = {
   login: () => Promise<void>;
   sessionEpoch: () => number;
   key: () => string;
   choose: (count: number) => Promise<string[]>;
-  upload: (path: string) => Promise<DraftAsset>;
+  upload: (path: string, onProgress?: (progress: MediaUploadProgress) => void) => Promise<DraftAsset>;
   source: (source: PostSource) => Promise<DraftAsset>;
   confirm: () => Promise<boolean>;
   create: (input: CreateCommunityPostInput) => Promise<CommunityPost>;
@@ -72,12 +74,12 @@ export class PostComposerWorkflow {
   leave() {
     this.active = false;
     this.version += 1;
-    this.patch({ busy: false });
+    this.patch({ busy: false, uploadProgress: undefined });
   }
   private begin() {
     if (!this.syncSession() || !this.active || this.state.busy) return null;
     const version = ++this.version;
-    this.patch({ busy: true, error: undefined });
+    this.patch({ busy: true, error: undefined, uploadProgress: undefined });
     return () => {
       if (!this.syncSession()) return false;
       return this.active && version === this.version;
@@ -116,7 +118,7 @@ export class PostComposerWorkflow {
     } catch (reason) {
       if (valid()) this.patch({ error: reason instanceof Error ? reason.message : '草稿准备失败，请重试' });
     } finally {
-      if (valid()) this.patch({ busy: false });
+      if (valid()) this.patch({ busy: false, uploadProgress: undefined });
     }
   }
   async addImages() {
@@ -138,13 +140,19 @@ export class PostComposerWorkflow {
         this.patch({ remainingUploads: this.uploadPaths.length });
       }
       while (this.uploadPaths.length && this.state.draft.assets.length < 9) {
-        const asset = await this.api.upload(this.uploadPaths[0]!);
+        const asset = await this.api.upload(this.uploadPaths[0]!, (uploadProgress) => {
+          if (valid()) this.patch({ uploadProgress });
+        });
         if (!valid()) return;
         this.uploadPaths.shift();
         const assets = this.state.draft.assets.some((item) => item.id === asset.id)
           ? this.state.draft.assets
           : [...this.state.draft.assets, asset];
-        this.patch({ draft: { ...this.state.draft, assets }, remainingUploads: this.uploadPaths.length });
+        this.patch({
+          draft: { ...this.state.draft, assets },
+          remainingUploads: this.uploadPaths.length,
+          uploadProgress: undefined,
+        });
       }
     } catch (reason) {
       if (valid())
@@ -153,7 +161,7 @@ export class PostComposerWorkflow {
           remainingUploads: this.uploadPaths.length,
         });
     } finally {
-      if (valid()) this.patch({ busy: false });
+      if (valid()) this.patch({ busy: false, uploadProgress: undefined });
     }
   }
   async submit() {

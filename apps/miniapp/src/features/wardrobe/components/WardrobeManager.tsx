@@ -8,7 +8,8 @@ import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceSt
 import { useCursorList } from '../../../hooks/useCursorList';
 import { ensureLogin } from '../../auth/auth.api';
 import { PrivateMediaImage } from '../../media/components/PrivateMediaImage';
-import { uploadImage } from '../../media/media.api';
+import { MediaUploadStatus } from '../../media/components/MediaUploadStatus';
+import { uploadImage, type MediaUploadProgress } from '../../media/media.api';
 import { createClothingItem, deleteClothingItem, listClothingPage, updateClothingItem } from '../wardrobe.api';
 import './WardrobeManager.scss';
 import '../../profile/components/ProfilePanel.scss';
@@ -44,6 +45,7 @@ export function WardrobeManager() {
   const [style, setStyle] = useState('');
   const [imagePath, setImagePath] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<MediaUploadProgress>();
   const [error, setError] = useState<string>();
   const isEditing = Boolean(editingId && editingId !== 'new');
   const visibleItems = useMemo(
@@ -75,6 +77,7 @@ export function WardrobeManager() {
     if (busy) return;
     setBusy(true);
     setError(undefined);
+    setUploadProgress(undefined);
     try {
       await ensureLogin();
       const result = await Taro.chooseImage({ count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'] });
@@ -83,6 +86,7 @@ export function WardrobeManager() {
       setError(reason instanceof Error ? reason.message : '没有取得图片，请检查相册权限后重试');
     } finally {
       setBusy(false);
+      setUploadProgress(undefined);
     }
   };
 
@@ -98,9 +102,10 @@ export function WardrobeManager() {
     }
     setBusy(true);
     setError(undefined);
+    setUploadProgress(undefined);
     try {
       await ensureLogin();
-      const asset = imagePath ? await uploadImage(imagePath) : undefined;
+      const asset = imagePath ? await uploadImage(imagePath, setUploadProgress) : undefined;
       const input: CreateClothingInput = {
         name: name.trim(),
         category,
@@ -116,6 +121,7 @@ export function WardrobeManager() {
       setError(reason instanceof Error ? reason.message : '保存失败，请检查图片权限或网络后重试');
     } finally {
       setBusy(false);
+      setUploadProgress(undefined);
     }
   };
 
@@ -173,6 +179,7 @@ export function WardrobeManager() {
           <AppButton variant="secondary" disabled={busy} onClick={() => void choosePhoto()}>
             {imagePath ? '更换照片' : isEditing ? '更换衣物照片' : '从相册或相机选择照片'}
           </AppButton>
+          <MediaUploadStatus progress={uploadProgress} />
           <View className="wardrobe-form-fields">
             <Text className="profile-muted">名称</Text>
             <Input

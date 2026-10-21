@@ -89,6 +89,23 @@ test('partial upload failures preserve fields and successes, retry only remainin
   assert.deepEqual(uploads, ['image1', 'image2', 'image2', 'image3']);
   assert.equal(f.flow.snapshot().remainingUploads, 0);
 });
+test('upload progress is visible while a file is being transferred and is cleared after success', async () => {
+  const f = fixture();
+  await f.flow.prepare();
+  f.api.choose = async () => ['image1'];
+  const pending = deferred<{ id: string; preview: string }>();
+  f.api.upload = async (_path, onProgress) => {
+    onProgress?.({ phase: 'uploading', percent: 42 });
+    return pending.promise;
+  };
+  const upload = f.flow.addImages();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(f.flow.snapshot().uploadProgress, { phase: 'uploading', percent: 42 });
+  pending.resolve({ id: 'image1', preview: 'image1' });
+  await upload;
+  assert.equal(f.flow.snapshot().uploadProgress, undefined);
+  assert.equal(f.flow.snapshot().remainingUploads, 0);
+});
 test('public scope confirmation rejection writes nothing; double clicks publish once', async () => {
   const f = fixture();
   await f.prepare();

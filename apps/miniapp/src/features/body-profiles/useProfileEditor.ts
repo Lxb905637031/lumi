@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Taro from '@tarojs/taro';
 import type { BodyProfile } from '@lumi/contracts';
 import { createBodyProfile, updateBodyProfile } from './body-profiles.api';
-import { uploadImage } from '../media/media.api';
+import { uploadImage, type MediaUploadProgress } from '../media/media.api';
 
 export const measurementFields = [
   ['heightCm', '身高 cm', '赤脚站直，从头顶量到地面'],
@@ -30,6 +30,7 @@ export function useProfileEditor(onSaved: () => Promise<void>) {
   const [assetId, setAssetId] = useState<string>();
   const [preview, setPreview] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<MediaUploadProgress>();
   const [error, setError] = useState<string>();
   const setField = (key: keyof ProfileForm, value: string) => setForm((previous) => ({ ...previous, [key]: value }));
   const edit = (profile: BodyProfile) => {
@@ -51,11 +52,12 @@ export function useProfileEditor(onSaved: () => Promise<void>) {
     if (busy) return;
     setBusy(true);
     setError(undefined);
+    setUploadProgress(undefined);
     try {
       const result = await Taro.chooseImage({ count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'] });
       const path = result.tempFilePaths[0];
       if (path) {
-        const asset = await uploadImage(path);
+        const asset = await uploadImage(path, setUploadProgress);
         setAssetId(asset.id);
         setPreview(path);
       }
@@ -63,6 +65,7 @@ export function useProfileEditor(onSaved: () => Promise<void>) {
       setError(reason instanceof Error ? reason.message : '图片上传失败，请检查相册权限并重试');
     } finally {
       setBusy(false);
+      setUploadProgress(undefined);
     }
   };
   const save = async () => {
@@ -87,5 +90,5 @@ export function useProfileEditor(onSaved: () => Promise<void>) {
       setBusy(false);
     }
   };
-  return { form, editing, preview, assetId, busy, error, setField, edit, chooseImage, save };
+  return { form, editing, preview, assetId, busy, error, uploadProgress, setField, edit, chooseImage, save };
 }

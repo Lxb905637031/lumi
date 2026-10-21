@@ -91,3 +91,17 @@ image {
 .page .lumi-button + .lumi-button {
   margin-top: 16px;
 }
+
+.media-upload-status {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  color: var(--lumi-color-muted);
+  font-size: 22px;
+}
+
+.media-upload-status-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}

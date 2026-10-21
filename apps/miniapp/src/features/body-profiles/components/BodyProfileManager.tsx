@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
 import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceStatus';
+import { MediaUploadStatus } from '../../media/components/MediaUploadStatus';
 import { useCursorList } from '../../../hooks/useCursorList';
 import { ensureLogin } from '../../auth/auth.api';
 import { archiveBodyProfile, listBodyProfilePage } from '../body-profiles.api';
@@ -95,6 +96,7 @@ export function BodyProfileManager() {
         </View>
         {editor.preview && <Image className="profile-person-preview" src={editor.preview} mode="aspectFit" />}
         {editor.assetId && <Text className="profile-muted">已关联人物图片</Text>}
+        <MediaUploadStatus progress={editor.uploadProgress} />
         {editor.error && <InlineFeedback message={editor.error} tone="error" />}
         <AppButton block variant="secondary" disabled={editor.busy} onClick={() => void editor.chooseImage()}>
           上传人物照
