@@ -1,5 +1,6 @@
 import type {
   BodyProfile,
+  BodyProfileVersion,
   ClothingItem,
   CreateGenerationInput,
   CursorPage,
@@ -12,6 +13,7 @@ export type TryOnApi = {
   login(): Promise<void>;
   sessionEpoch(): number;
   profiles(cursor?: string): Promise<CursorPage<BodyProfile>>;
+  profileVersions(profileId: string, cursor?: string): Promise<CursorPage<BodyProfileVersion>>;
   clothing(cursor?: string): Promise<CursorPage<ClothingItem>>;
   quota(): Promise<QuotaSummary>;
   create(input: CreateGenerationInput): Promise<GenerationJob>;
@@ -28,6 +30,8 @@ export type TryOnSnapshot = {
   profiles: BodyProfile[];
   clothing: ClothingItem[];
   profileCursor: string | null;
+  profileHistoryCursor: string | null;
+  profileHistoryId?: string;
   clothingCursor: string | null;
   profileVersionId?: string;
   clothingId?: string;
@@ -42,7 +46,15 @@ export function isActiveJob(job?: GenerationJob): boolean {
 }
 
 function initialState(): TryOnSnapshot {
-  return { loaded: false, busy: false, profiles: [], clothing: [], profileCursor: null, clothingCursor: null };
+  return {
+    loaded: false,
+    busy: false,
+    profiles: [],
+    clothing: [],
+    profileCursor: null,
+    profileHistoryCursor: null,
+    clothingCursor: null,
+  };
 }
 
 /** Platform-independent workflow. React renders snapshots; Taro owns dialogs and page lifecycle. */
@@ -95,7 +107,45 @@ export class TryOnWorkflow {
   selectProfile(id: string) {
     if (this.locked()) return;
     if (!this.state.profiles.some((p) => p.versions.some((v) => v.id === id))) return;
-    this.patch({ profileVersionId: id, job: undefined, error: undefined });
+    const selected = this.state.profiles.find((profile) => profile.versions.some((version) => version.id === id));
+    this.patch({
+      profileVersionId: id,
+      profileHistoryCursor: selected?.id === this.state.profileHistoryId ? this.state.profileHistoryCursor : null,
+      profileHistoryId: selected?.id,
+      job: undefined,
+      error: undefined,
+    });
+  }
+
+  async loadProfileHistory() {
+    this.resetForSession();
+    if (this.locked()) return;
+    const profile = this.state.profiles.find((item) =>
+      item.versions.some((version) => version.id === this.state.profileVersionId),
+    );
+    if (!profile || profile.versions.length >= profile.activeVersion) return;
+    const cursor = this.state.profileHistoryId === profile.id ? this.state.profileHistoryCursor : null;
+    const action = ++this.action;
+    this.patch({ busy: true, error: undefined, profileHistoryId: profile.id });
+    try {
+      const page = await this.api.profileVersions(profile.id, cursor ?? undefined);
+      if (!this.valid(action)) return;
+      this.patch({
+        profiles: this.state.profiles.map((item) =>
+          item.id === profile.id
+            ? {
+                ...item,
+                versions: this.merge(item.versions, page.items).sort((left, right) => right.version - left.version),
+              }
+            : item,
+        ),
+        profileHistoryCursor: page.nextCursor,
+      });
+    } catch (error) {
+      if (this.valid(action)) this.patch({ error: this.message(error) });
+    } finally {
+      if (this.valid(action)) this.patch({ busy: false });
+    }
   }
   selectClothing(id: string) {
     if (this.locked() || !this.state.clothing.some((c) => c.id === id)) return;

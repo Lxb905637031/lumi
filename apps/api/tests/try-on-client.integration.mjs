@@ -16,6 +16,7 @@ for (const value of [baseUrl, process.env.DATABASE_URL]) {
 const db = new PrismaClient();
 const runId = randomUUID();
 let userId;
+let outsiderId;
 let accessToken;
 let requests = 0;
 let confirmation;
@@ -70,6 +71,41 @@ try {
     heightCm: 170,
     sourceAssetId: person.id,
   });
+  const profileId = profile.profile.id;
+  const firstProfileVersionId = profile.id;
+  const secondProfileVersion = await request('/body-profiles/' + profileId, 'PATCH', {
+    name: 'Workflow person',
+    heightCm: 171,
+    expectedVersion: 1,
+  });
+  const latestProfileVersion = await request('/body-profiles/' + profileId, 'PATCH', {
+    name: 'Workflow person',
+    heightCm: 172,
+    expectedVersion: 2,
+  });
+  const firstHistoryPage = await request('/body-profiles/' + profileId + '/versions?limit=1');
+  assert.equal(firstHistoryPage.items.length, 1);
+  assert.ok(firstHistoryPage.nextCursor);
+  const remainingHistory = await request(
+    '/body-profiles/' + profileId + '/versions?limit=1&cursor=' + encodeURIComponent(firstHistoryPage.nextCursor),
+  );
+  assert.equal(remainingHistory.items.length, 1);
+  const allHistory = [...firstHistoryPage.items, ...remainingHistory.items];
+  assert.deepEqual(new Set(allHistory.map((version) => version.version)), new Set([2, 3]));
+  assert.equal(secondProfileVersion.version, 2);
+  await assert.rejects(
+    request('/body-profiles/' + profileId + '/versions?cursor=invalid'),
+    (error) => error.statusCode === 400,
+  );
+
+  const ownerToken = accessToken;
+  const outsiderSession = await request('/auth/wechat/login', 'POST', {
+    code: 'local:client-workflow-outsider:' + runId,
+  });
+  outsiderId = outsiderSession.user.id;
+  accessToken = outsiderSession.accessToken;
+  await assert.rejects(request('/body-profiles/' + profileId + '/versions'), (error) => error.statusCode === 404);
+  accessToken = ownerToken;
   const clothing = await request('/wardrobe/items', 'POST', {
     name: 'Workflow shirt',
     category: 'TOP',
@@ -80,6 +116,10 @@ try {
     sessionEpoch: () => 1,
     profiles: async (cursor) =>
       request('/body-profiles?limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '')),
+    profileVersions: async (profileId, cursor) =>
+      request(
+        '/body-profiles/' + profileId + '/versions?limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''),
+      ),
     clothing: async (cursor) =>
       request('/wardrobe/items?limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '')),
     quota: () => request('/quota'),
@@ -103,7 +143,13 @@ try {
   });
   await flow.prepare();
   assert.equal(flow.snapshot().profileVersionId, undefined);
-  flow.selectProfile(profile.id);
+  flow.selectProfile(latestProfileVersion.id);
+  await flow.loadProfileHistory();
+  assert.deepEqual(
+    flow.snapshot().profiles[0].versions.map((version) => version.version),
+    [3, 2, 1],
+  );
+  flow.selectProfile(firstProfileVersionId);
   flow.selectClothing(clothing.id);
   await flow.start();
   assert.match(flow.snapshot().error, /response lost/);
@@ -120,6 +166,8 @@ try {
   assert.equal(flow.snapshot().pendingInput, undefined);
   assert.equal(flow.snapshot().quota.available, 4);
   assert.equal(flow.snapshot().quota.consumed, 1);
+  const persistedJob = await db.generationJob.findFirst({ where: { userId }, select: { profileVersionId: true } });
+  assert.equal(persistedJob?.profileVersionId, firstProfileVersionId);
   assert.equal(await db.generationJob.count({ where: { userId } }), 1);
   assert.equal(await db.quotaLedger.count({ where: { userId, type: 'COMMIT' } }), 1);
   flow.leave();
@@ -129,7 +177,8 @@ try {
         mode: 'miniapp headless workflow + real HTTP/S3/PostgreSQL/Redis, local-svg only',
         requests,
         passed: [
-          'explicit photo/profile/clothing selection and quota confirmation',
+          'explicit historical profile version/photo/clothing selection and quota confirmation',
+          'profile version cursor pagination, invalid cursor rejection and cross-user isolation',
           'lost create response followed by same-key recovery',
           'one persisted job, one consumption, terminal status and balance synchronized',
         ],
@@ -145,9 +194,9 @@ try {
     ),
   );
 } finally {
-  if (userId) {
+  for (const cleanupUserId of [userId, outsiderId].filter(Boolean)) {
     const assets = await db.mediaAsset.findMany({
-      where: { ownerId: userId, storageDriver: 's3' },
+      where: { ownerId: cleanupUserId, storageDriver: 's3' },
       select: { objectKey: true },
     });
     for (const asset of assets)
@@ -156,8 +205,8 @@ try {
         create: { objectKey: asset.objectKey, notBefore: new Date() },
         update: { notBefore: new Date() },
       });
-    await db.generationJob.deleteMany({ where: { userId } });
-    await db.user.delete({ where: { id: userId } });
+    await db.generationJob.deleteMany({ where: { userId: cleanupUserId } });
+    await db.user.delete({ where: { id: cleanupUserId } });
   }
   await db.$disconnect();
 }

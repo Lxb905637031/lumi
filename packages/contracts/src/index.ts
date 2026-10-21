@@ -156,6 +156,8 @@ export type BodyProfile = {
   updatedAt: string;
 };
 
+export type BodyProfileVersionPage = CursorPage<BodyProfileVersion>;
+
 export type CreateBodyProfileInput = {
   name: string;
   heightCm?: number;

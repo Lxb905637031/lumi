@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import { getSessionEpoch } from '../../services/http-client';
 import { ensureLogin } from '../auth/auth.api';
-import { listBodyProfilePage } from '../body-profiles/body-profiles.api';
+import { listBodyProfilePage, listBodyProfileVersions } from '../body-profiles/body-profiles.api';
 import { cancelGeneration, createGeneration, getGeneration, retryGeneration } from '../generations/generations.api';
 import { getQuota } from '../quota/quota.api';
 import { listClothingPage } from '../wardrobe/wardrobe.api';
@@ -13,6 +13,7 @@ const workflow = new TryOnWorkflow({
   login: ensureLogin,
   sessionEpoch: getSessionEpoch,
   profiles: listBodyProfilePage,
+  profileVersions: listBodyProfileVersions,
   clothing: listClothingPage,
   quota: getQuota,
   create: createGeneration,

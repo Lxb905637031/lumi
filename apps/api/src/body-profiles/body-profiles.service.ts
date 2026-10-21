@@ -4,10 +4,13 @@ import type { CursorPage } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import type { CursorPaginationDto } from '../common/pagination/pagination.dto';
+import { decodeProfileVersionCursor, encodeProfileVersionCursor } from './profile-version-cursor';
 
 type BodyProfileListItem = Prisma.BodyProfileGetPayload<{
   include: { versions: { take: 1 } };
 }>;
+
+type ProfileVersion = Prisma.BodyProfileVersionGetPayload<object>;
 
 @Injectable()
 export class BodyProfilesService {
@@ -94,6 +97,31 @@ export class BodyProfilesService {
     });
     if (!profile) throw new NotFoundException('身材档案不存在');
     return profile;
+  }
+
+  async listVersions(userId: string, id: string, pagination: CursorPaginationDto): Promise<CursorPage<ProfileVersion>> {
+    const profile = await this.prisma.bodyProfile.findFirst({
+      where: { id, userId, archivedAt: null },
+      select: { id: true },
+    });
+    if (!profile) throw new NotFoundException('身材档案不存在');
+
+    const cursor = decodeProfileVersionCursor(pagination.cursor);
+    const versions = await this.prisma.bodyProfileVersion.findMany({
+      where: {
+        profileId: id,
+        ...(cursor ? { version: { lt: cursor } } : {}),
+      },
+      orderBy: { version: 'desc' },
+      take: pagination.limit + 1,
+    });
+    const hasNextPage = versions.length > pagination.limit;
+    const items = hasNextPage ? versions.slice(0, pagination.limit) : versions;
+    const last = items.at(-1);
+    return {
+      items,
+      nextCursor: hasNextPage && last ? encodeProfileVersionCursor(last.version) : null,
+    };
   }
 
   async update(

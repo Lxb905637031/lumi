@@ -26,6 +26,11 @@ export class BodyProfilesController {
     return this.profiles.findOwned(user.id, id);
   }
 
+  @Get(':id/versions')
+  listVersions(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Query() query: CursorPaginationDto) {
+    return this.profiles.listVersions(user.id, id, query);
+  }
+
   @Patch(':id')
   update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: UpdateBodyProfileDto) {
     return this.profiles.update(user.id, id, dto);

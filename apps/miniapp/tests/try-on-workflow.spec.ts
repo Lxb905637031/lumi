@@ -65,11 +65,30 @@ function fixture() {
   };
   let epoch = 0;
   let keyCount = 0;
-  const calls = { creates: [] as CreateGenerationInput[], retries: 0, reads: 0, confirms: 0 };
+  const calls = { creates: [] as CreateGenerationInput[], retries: 0, reads: 0, confirms: 0, histories: 0 };
   const api: TryOnApi = {
     login: async () => {},
     sessionEpoch: () => epoch,
     profiles: async () => ({ items: [profile], nextCursor: 'profiles-2' }),
+    profileVersions: async (profileId, cursor) => {
+      assert.equal(profileId, 'p1');
+      calls.histories += 1;
+      if (cursor) return { items: [], nextCursor: null };
+      return {
+        items: [
+          {
+            id: 'v1',
+            profileId: 'p1',
+            version: 1,
+            sourceAssetId: 'photo1',
+            measurements: { heightCm: 168, weightKg: 58 },
+            createdAt: '',
+          },
+          profile.versions[0]!,
+        ],
+        nextCursor: null,
+      };
+    },
     clothing: async () => ({ items: [clothing], nextCursor: 'clothes-2' }),
     quota: async () => ({ ...quota }),
     create: async (input) => {
@@ -136,6 +155,28 @@ test('cursor loading deduplicates and does not silently select a different item'
   await f.flow.more('clothing');
   assert.equal(f.flow.snapshot().clothing.length, 2);
   assert.equal(f.flow.snapshot().clothingId, 'c1');
+});
+
+test('historical profile versions are loaded on demand and the selected version is sent unchanged', async () => {
+  const f = fixture();
+  await f.flow.prepare();
+  assert.deepEqual(
+    f.flow.snapshot().profiles[0]?.versions.map((version) => version.id),
+    ['v2'],
+  );
+  await f.flow.loadProfileHistory();
+  assert.equal(f.calls.histories, 0);
+  f.flow.selectProfile('v2');
+  await f.flow.loadProfileHistory();
+  assert.deepEqual(
+    f.flow.snapshot().profiles[0]?.versions.map((version) => version.id),
+    ['v2', 'v1'],
+  );
+  assert.equal(f.calls.histories, 1);
+  f.flow.selectProfile('v1');
+  f.flow.selectClothing('c1');
+  await f.flow.start();
+  assert.equal(f.calls.creates[0]?.profileVersionId, 'v1');
 });
 
 test('confirmation rejection or zero quota prevents writes and does not allocate a pending request', async () => {

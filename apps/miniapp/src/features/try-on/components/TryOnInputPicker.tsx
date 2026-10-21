@@ -57,6 +57,18 @@ export function TryOnInputPicker({ state, workflow }: { state: TryOnSnapshot; wo
           更多人物档案
         </AppButton>
       )}
+      {profileIndex > 0 &&
+        (() => {
+          const profile = state.profiles.find((item) =>
+            item.versions.some((itemVersion) => itemVersion.id === state.profileVersionId),
+          );
+          if (!profile || profile.versions.length >= profile.activeVersion) return null;
+          return (
+            <AppButton compact variant="secondary" disabled={locked} onClick={() => void workflow.loadProfileHistory()}>
+              {state.busy ? '加载中' : state.profileHistoryCursor ? '更多历史版本' : '加载历史版本'}
+            </AppButton>
+          );
+        })()}
       <View className="try-on-step">
         <Text className="try-on-step-number">2</Text>
         <Text>选择一件衣物</Text>

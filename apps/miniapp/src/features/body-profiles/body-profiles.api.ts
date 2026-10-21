@@ -1,4 +1,10 @@
-import type { BodyProfile, CreateBodyProfileInput, CreateBodyProfileResponse, CursorPage } from '@lumi/contracts';
+import type {
+  BodyProfile,
+  BodyProfileVersionPage,
+  CreateBodyProfileInput,
+  CreateBodyProfileResponse,
+  CursorPage,
+} from '@lumi/contracts';
 import { request } from '../../services/http-client';
 
 export function listBodyProfiles(): Promise<BodyProfile[]> {
@@ -7,6 +13,13 @@ export function listBodyProfiles(): Promise<BodyProfile[]> {
 
 export function listBodyProfilePage(cursor?: string): Promise<CursorPage<BodyProfile>> {
   return request('/body-profiles?limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+}
+
+export function listBodyProfileVersions(profileId: string, cursor?: string): Promise<BodyProfileVersionPage> {
+  return request(
+    `/body-profiles/${encodeURIComponent(profileId)}/versions?limit=20` +
+      (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''),
+  );
 }
 
 export function createBodyProfile(input: CreateBodyProfileInput): Promise<CreateBodyProfileResponse> {
