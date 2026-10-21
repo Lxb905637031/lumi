@@ -11,9 +11,10 @@
 ## 验证证据
 
 - `LUMI_API_URL=http://127.0.0.1:4358/api/v1 LUMI_EXPECTED_UPLOAD_ORIGIN=http://192.168.1.10:59000 pnpm --filter @lumi/api test:storage`：34 次真实本机 Nest HTTP 请求通过；实际 SeaweedFS S3 上传 URL origin 为 `http://192.168.1.10:59000`，并覆盖签名策略、对象上传、完成、读取、并发、过期和物理清理。
+- 修复后重启当前设备调试 API `4300`，并在该端口执行 `LUMI_API_URL=http://127.0.0.1:4300/api/v1 LUMI_EXPECTED_UPLOAD_ORIGIN=http://192.168.1.10:59000 pnpm --filter @lumi/api test:storage`：34 次真实 HTTP 请求通过；完整链路实际使用设备可达地址。
 - `LUMI_API_URL=http://127.0.0.1:4358/api/v1 pnpm --filter @lumi/api test:media-moderation`：19 次真实本机 HTTP/PostgreSQL 请求通过，覆盖分类筛选后的跨页游标。
 - `pnpm check`：格式、Lint、全 workspace 类型检查、单测和 API/后台/小程序构建通过。
 
 ## 尚未验收
 
-当前用户原有 API `4300` 仍运行旧进程；本次使用 `4358` 验证新代码，没有终止或覆盖旧进程。要让当前微信开发者工具/手机使用修复，需要以 `S3_PUBLIC_ENDPOINT` 重启 API，并确认小程序 API 地址指向该进程。此处只证明真实本机服务及 S3 互通，不代表微信开发者工具、iOS/Android 真机、生产 HTTPS 域名或生产对象存储已验收。
+设备调试 API `4300` 已使用 `S3_PUBLIC_ENDPOINT=http://192.168.1.10:59000` 启动，健康检查和完整存储专项均通过。此处证明真实本机服务及 S3 互通，不代表微信开发者工具、iOS/Android 真机、生产 HTTPS 域名或生产对象存储已验收。
