@@ -71,6 +71,8 @@ try {
     heightCm: 170,
     sourceAssetId: person.id,
   });
+  assert.equal(typeof profile.createdAt, 'string');
+  assert.equal('archivedAt' in profile.profile, false);
   const profileId = profile.profile.id;
   const firstProfileVersionId = profile.id;
   const secondProfileVersion = await request('/body-profiles/' + profileId, 'PATCH', {

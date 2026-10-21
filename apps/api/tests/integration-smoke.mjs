@@ -153,6 +153,17 @@ try {
   };
   const profileVersion = await request('/body-profiles', 201, write('POST', ownerAuth, profileInput));
   const profileId = profileVersion.profileId;
+  assert.deepEqual(
+    Object.keys(profileVersion).sort(),
+    ['createdAt', 'id', 'measurements', 'profile', 'profileId', 'sourceAssetId', 'version'].sort(),
+  );
+  assert.deepEqual(
+    Object.keys(profileVersion.profile).sort(),
+    ['activeVersion', 'createdAt', 'id', 'name', 'updatedAt', 'userId', 'versions'].sort(),
+  );
+  assert.equal(typeof profileVersion.createdAt, 'string');
+  assert.equal('archivedAt' in profileVersion.profile, false);
+  assert.equal(profileVersion.profile.versions[0].id, profileVersion.id);
   assert.equal(profileVersion.measurements.shoulderCm, 39);
   await request('/body-profiles/' + profileId, 404, { headers: outsiderAuth });
   const updatedProfile = await request(
@@ -168,6 +179,12 @@ try {
   await request('/body-profiles/' + profileId, 409, write('PATCH', ownerAuth, { ...profileInput, expectedVersion: 1 }));
   const profileAfterConflict = await request('/body-profiles/' + profileId, 200, { headers: ownerAuth });
   assert.equal(profileAfterConflict.activeVersion, 2);
+  assert.deepEqual(
+    Object.keys(profileAfterConflict).sort(),
+    ['activeVersion', 'createdAt', 'id', 'name', 'updatedAt', 'userId', 'versions'].sort(),
+  );
+  assert.equal(profileAfterConflict.versions[0].version, 2);
+  assert.equal('archivedAt' in profileAfterConflict, false);
 
   for (let index = 0; index < 3; index += 1) {
     await request('/body-profiles', 201, write('POST', ownerAuth, { name: 'Pagination ' + index }));

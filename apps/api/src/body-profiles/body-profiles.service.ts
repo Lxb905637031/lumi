@@ -1,22 +1,19 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { CursorPage } from '@lumi/contracts';
+import type { BodyProfile, BodyProfileVersion, CursorPage, CreateBodyProfileResponse } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import type { CursorPaginationDto } from '../common/pagination/pagination.dto';
 import { decodeProfileVersionCursor, encodeProfileVersionCursor } from './profile-version-cursor';
 
-type BodyProfileListItem = Prisma.BodyProfileGetPayload<{
-  include: { versions: { take: 1 } };
-}>;
-
-type ProfileVersion = Prisma.BodyProfileVersionGetPayload<object>;
+type BodyProfileRecord = Prisma.BodyProfileGetPayload<{ include: { versions: true } }>;
+type ProfileVersionRecord = Prisma.BodyProfileVersionGetPayload<object>;
 
 @Injectable()
 export class BodyProfilesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(userId: string, pagination: CursorPaginationDto): Promise<CursorPage<BodyProfileListItem>> {
+  async list(userId: string, pagination: CursorPaginationDto): Promise<CursorPage<BodyProfile>> {
     const cursor = decodeTimestampCursor(pagination.cursor);
     const profiles = await this.prisma.bodyProfile.findMany({
       where: {
@@ -42,7 +39,7 @@ export class BodyProfilesService {
     const items = hasNextPage ? profiles.slice(0, pagination.limit) : profiles;
     const last = items.at(-1);
     return {
-      items,
+      items: items.map((profile) => this.toProfile(profile)),
       nextCursor:
         hasNextPage && last
           ? encodeTimestampCursor({
@@ -65,13 +62,13 @@ export class BodyProfilesService {
       hipCm?: number;
       sourceAssetId?: string;
     },
-  ) {
+  ): Promise<CreateBodyProfileResponse> {
     await this.assertAssetOwned(userId, input.sourceAssetId);
     return this.prisma.$transaction(async (tx) => {
       const profile = await tx.bodyProfile.create({
         data: { userId, name: input.name },
       });
-      return tx.bodyProfileVersion.create({
+      const version = await tx.bodyProfileVersion.create({
         data: {
           profileId: profile.id,
           version: 1,
@@ -87,19 +84,24 @@ export class BodyProfilesService {
         },
         include: { profile: true },
       });
+      return this.toCreateResponse(version);
     });
   }
 
-  async findOwned(userId: string, id: string) {
+  async findOwned(userId: string, id: string): Promise<BodyProfile> {
     const profile = await this.prisma.bodyProfile.findFirst({
       where: { id, userId, archivedAt: null },
       include: { versions: { orderBy: { version: 'desc' }, take: 1 } },
     });
     if (!profile) throw new NotFoundException('身材档案不存在');
-    return profile;
+    return this.toProfile(profile);
   }
 
-  async listVersions(userId: string, id: string, pagination: CursorPaginationDto): Promise<CursorPage<ProfileVersion>> {
+  async listVersions(
+    userId: string,
+    id: string,
+    pagination: CursorPaginationDto,
+  ): Promise<CursorPage<BodyProfileVersion>> {
     const profile = await this.prisma.bodyProfile.findFirst({
       where: { id, userId, archivedAt: null },
       select: { id: true },
@@ -119,7 +121,7 @@ export class BodyProfilesService {
     const items = hasNextPage ? versions.slice(0, pagination.limit) : versions;
     const last = items.at(-1);
     return {
-      items,
+      items: items.map((version) => this.toVersion(version)),
       nextCursor: hasNextPage && last ? encodeProfileVersionCursor(last.version) : null,
     };
   }
@@ -128,7 +130,7 @@ export class BodyProfilesService {
     userId: string,
     id: string,
     input: Parameters<BodyProfilesService['create']>[1] & { expectedVersion: number },
-  ) {
+  ): Promise<CreateBodyProfileResponse> {
     await this.assertAssetOwned(userId, input.sourceAssetId);
     const profile = await this.prisma.bodyProfile.findFirst({ where: { id, userId, archivedAt: null } });
     if (!profile) throw new NotFoundException('身材档案不存在');
@@ -141,7 +143,7 @@ export class BodyProfilesService {
         data: { name: input.name, activeVersion: version },
       });
       if (updated.count !== 1) throw new ConflictException('档案状态已变化，请刷新');
-      return tx.bodyProfileVersion.create({
+      const created = await tx.bodyProfileVersion.create({
         data: {
           profileId: id,
           version,
@@ -164,6 +166,7 @@ export class BodyProfilesService {
         },
         include: { profile: true },
       });
+      return this.toCreateResponse(created);
     });
   }
 
@@ -182,5 +185,53 @@ export class BodyProfilesService {
       where: { id: assetId, ownerId: userId, status: 'READY', deletedAt: null },
     });
     if (!asset) throw new NotFoundException('人物图片不存在');
+  }
+
+  private toCreateResponse(
+    row: ProfileVersionRecord & { profile: Omit<BodyProfileRecord, 'versions'> },
+  ): CreateBodyProfileResponse {
+    const version = this.toVersion(row);
+    return {
+      ...version,
+      profile: this.toProfile({ ...row.profile, versions: [row] }),
+    };
+  }
+
+  private toProfile(row: BodyProfileRecord): BodyProfile {
+    return {
+      id: row.id,
+      userId: row.userId,
+      name: row.name,
+      activeVersion: row.activeVersion,
+      versions: row.versions.map((version) => this.toVersion(version)),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  private toVersion(row: ProfileVersionRecord): BodyProfileVersion {
+    const values =
+      row.measurements && typeof row.measurements === 'object' && !Array.isArray(row.measurements)
+        ? row.measurements
+        : {};
+    const measurement = (key: string) => {
+      const value = values[key];
+      return typeof value === 'number' ? value : null;
+    };
+    return {
+      id: row.id,
+      profileId: row.profileId,
+      sourceAssetId: row.sourceAssetId,
+      version: row.version,
+      measurements: {
+        heightCm: measurement('heightCm'),
+        weightKg: measurement('weightKg'),
+        shoulderCm: measurement('shoulderCm'),
+        bustCm: measurement('bustCm'),
+        waistCm: measurement('waistCm'),
+        hipCm: measurement('hipCm'),
+      },
+      createdAt: row.createdAt.toISOString(),
+    };
   }
 }
