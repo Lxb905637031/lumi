@@ -16,6 +16,17 @@ type AuditRow = {
   createdAt: Date;
 };
 
+export type AuditItem = {
+  id: string;
+  type: string;
+  targetId: string;
+  actorId: string | null;
+  fromStatus: string;
+  toStatus: string;
+  reason: string | null;
+  createdAt: Date;
+};
+
 @Injectable()
 export class OperationsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -33,7 +44,7 @@ export class OperationsService {
     return { pendingPosts, generationToday, failedGenerations, communityPosts, openReports };
   }
 
-  async listAudit(query: AuditQueryDto): Promise<CursorPage<AuditRow>> {
+  async listAudit(query: AuditQueryDto): Promise<CursorPage<AuditItem>> {
     const cursor = decodeTimestampCursor(query.cursor);
     const filters: Prisma.Sql[] = [];
     if (query.type) filters.push(Prisma.sql`audit.type = ${query.type}`);
@@ -77,7 +88,9 @@ export class OperationsService {
       LIMIT ${query.limit + 1}
     `);
     const hasNext = rows.length > query.limit;
-    const items = hasNext ? rows.slice(0, query.limit) : rows;
+    // Keep the raw query shape private so future SQL changes cannot expand the
+    // admin response contract by accident.
+    const items = (hasNext ? rows.slice(0, query.limit) : rows).map((row) => this.toContract(row));
     const last = items.at(-1);
     return {
       items,
@@ -85,6 +98,19 @@ export class OperationsService {
         hasNext && last
           ? encodeTimestampCursor({ timestamp: last.createdAt.toISOString(), id: `${last.id}:${last.type}` })
           : null,
+    };
+  }
+
+  private toContract(row: AuditRow): AuditItem {
+    return {
+      id: row.id,
+      type: row.type,
+      targetId: row.targetId,
+      actorId: row.actorId,
+      fromStatus: row.fromStatus,
+      toStatus: row.toStatus,
+      reason: row.reason,
+      createdAt: row.createdAt,
     };
   }
 }

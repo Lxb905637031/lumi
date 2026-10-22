@@ -23,7 +23,7 @@ LUMI_API_URL=http://127.0.0.1:4358/api/v1 pnpm --filter @lumi/api test:audit-sea
 - 帖子、评论、媒体、用户四类审计统一返回，游标跨页无重复；
 - 类型、操作者 ID、目标 ID 筛选；
 - 用户角色变更的前后状态；
-- 响应不包含对象键、预览数据和账号私密字段。
+- 响应严格限制为 `id`、`type`、`targetId`、`actorId`、`fromStatus`、`toStatus`、`reason`、`createdAt` 八个公开字段，不包含对象键、预览数据和账号私密字段；集成测试锁定字段集合。
 
 ## 未覆盖
 

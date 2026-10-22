@@ -139,6 +139,13 @@ try {
   assert.equal(new Set(rows.map((row) => `${row.type}:${row.id}`)).size, 4);
   assert.deepEqual(new Set(rows.map((row) => row.type)), new Set(['POST', 'COMMENT', 'MEDIA', 'USER']));
   assert.ok(rows.every((row) => row.actorId === admin.user.id));
+  assert.ok(
+    rows.every(
+      (row) =>
+        JSON.stringify(Object.keys(row).sort()) ===
+        JSON.stringify(['actorId', 'createdAt', 'fromStatus', 'id', 'reason', 'targetId', 'toStatus', 'type']),
+    ),
+  );
   assert.ok(rows.every((row) => !('objectKey' in row) && !('email' in row) && !('previewData' in row)));
 
   const commentOnly = await request(`/admin/audit?type=COMMENT&targetId=${comment.id}`, admin.accessToken);
@@ -158,7 +165,7 @@ try {
           'four audit sources return a stable unified cursor page without duplicates',
           'actor, type and target filters',
           'user role transitions are visible',
-          'audit response omits media and account sensitive fields',
+          'audit response has an explicit field allowlist and omits media/account sensitive fields',
         ],
         mode: 'Real loopback HTTP/PostgreSQL with disposable local fixtures; no external services',
       },
