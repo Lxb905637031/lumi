@@ -112,6 +112,14 @@ try {
     moderator.accessToken,
   );
   assert.equal(approvalActions.items.length, 1);
+  assert.deepEqual(Object.keys(approvalActions.items[0]).sort(), [
+    'actorId',
+    'createdAt',
+    'fromStatus',
+    'id',
+    'reason',
+    'toStatus',
+  ]);
   assert.deepEqual(
     {
       actorId: approvalActions.items[0].actorId,

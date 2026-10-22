@@ -136,7 +136,14 @@ export class MediaModerationService {
     const items = hasNext ? rows.slice(0, query.limit) : rows;
     const last = items.at(-1);
     return {
-      items: items.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+      items: items.map((row) => ({
+        id: row.id,
+        actorId: row.actorId,
+        fromStatus: row.fromStatus,
+        toStatus: row.toStatus,
+        reason: row.reason,
+        createdAt: row.createdAt.toISOString(),
+      })),
       nextCursor:
         hasNext && last ? encodeTimestampCursor({ timestamp: last.createdAt.toISOString(), id: last.id }) : null,
     };

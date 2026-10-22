@@ -147,6 +147,14 @@ try {
     reason: '旧版本通过',
   });
   const history = await request(`/admin/moderation/media/${clothingAsset.id}/actions?limit=20`, admin.accessToken);
+  assert.deepEqual(Object.keys(history.items[0]).sort(), [
+    'actorId',
+    'createdAt',
+    'fromStatus',
+    'id',
+    'reason',
+    'toStatus',
+  ]);
   assert.equal(history.items.length, 1);
   assert.equal(history.items[0].toStatus, 'REJECTED');
   const filtered = await request('/admin/moderation/media?status=REJECTED&kind=CLOTHING&limit=20', admin.accessToken);

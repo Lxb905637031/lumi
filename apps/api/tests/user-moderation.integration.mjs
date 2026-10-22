@@ -78,6 +78,16 @@ try {
   });
   assert.equal(suspended.status, 'SUSPENDED');
   const suspensionHistory = await request(`/admin/users/${target.user.id}/actions?limit=20`, admin.accessToken);
+  assert.deepEqual(Object.keys(suspensionHistory.items[0]).sort(), [
+    'actorId',
+    'createdAt',
+    'fromRole',
+    'fromStatus',
+    'id',
+    'reason',
+    'toRole',
+    'toStatus',
+  ]);
   assert.equal(suspensionHistory.items.length, 1);
   assert.equal(suspensionHistory.items[0].toStatus, 'SUSPENDED');
   await request(`/admin/users/${target.user.id}/actions?limit=0`, admin.accessToken, 400);
