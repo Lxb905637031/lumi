@@ -58,6 +58,17 @@ try {
   assert.match(badConfirmation.message, /确认导出/);
   assert.ok(badConfirmation.meta.requestId);
 
+  await db.mediaAsset.create({
+    data: {
+      ownerId: alice.user.id,
+      objectKey: `private/${runId}/profile.webp`,
+      sha256: 'internal-sha256-marker',
+      mimeType: 'image/webp',
+      byteSize: 128,
+      previewData: 'internal-preview-marker',
+    },
+  });
+
   const exportRequest = await request('/account/privacy/exports', alice.accessToken, 201, 'POST', {
     confirmation: 'EXPORT_MY_DATA',
   });
@@ -68,6 +79,17 @@ try {
   });
   const exported = await request(`/account/privacy/exports/${exportRequest.id}/download`, alice.accessToken);
   assert.equal(exported.data.user.id, alice.user.id);
+  assert.deepEqual(Object.keys(exported.data.mediaAssets[0]).sort(), [
+    'byteSize',
+    'createdAt',
+    'id',
+    'mimeType',
+    'status',
+    'visibility',
+  ]);
+  assert.equal(JSON.stringify(exported.data).includes('internal-sha256-marker'), false);
+  assert.equal(JSON.stringify(exported.data).includes('internal-preview-marker'), false);
+  assert.equal(JSON.stringify(exported.data).includes(`private/${runId}`), false);
   await request(`/account/privacy/exports/${exportRequest.id}`, bob.accessToken, 404);
   assert.equal(ready.id, exportRequest.id);
 
