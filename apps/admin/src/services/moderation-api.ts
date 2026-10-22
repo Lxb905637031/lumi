@@ -74,6 +74,17 @@ export function updateModerationStatus(
   });
 }
 
+export function updateModerationStatuses(postIds: string[], status: Exclude<ModerationStatus, 'PENDING'>, reason = '') {
+  return adminRequest<{
+    items: ModerationQueueItem[];
+    updatedCount: number;
+    skippedCount: number;
+  }>('/admin/moderation/posts/batch/status', {
+    method: 'PATCH',
+    body: JSON.stringify({ ids: postIds, status, reason: reason.trim() || undefined }),
+  });
+}
+
 export type CommentModerationItem = {
   id: string;
   postId: string;

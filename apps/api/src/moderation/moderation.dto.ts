@@ -1,6 +1,15 @@
 import { ModerationStatus as ModerationStatusEnum, ReportStatus as ReportStatusEnum } from '@prisma/client';
 import type { ModerationStatus, ReportStatus } from '@prisma/client';
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { CursorPaginationDto } from '../common/pagination/pagination.dto';
 
 const moderationActionStatuses = [
@@ -27,6 +36,15 @@ export class UpdateModerationStatusDto {
   @IsString()
   @MaxLength(500)
   reason?: string;
+}
+
+export class BatchUpdateModerationStatusDto extends UpdateModerationStatusDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ArrayUnique()
+  @IsString({ each: true })
+  ids!: string[];
 }
 
 export class ReportQueueQueryDto extends CursorPaginationDto {

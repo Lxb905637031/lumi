@@ -88,6 +88,25 @@ try {
   assert.equal(pendingIds.size, 3);
   assert.ok(pending.every((post) => pendingIds.has(post.id)));
 
+  const batchPosts = await Promise.all(
+    Array.from({ length: 2 }, (_, index) => createPost(owner.user.id, `batch-${index}-${runId}`)),
+  );
+  const staleBatchPost = await createPost(owner.user.id, `stale-batch-${runId}`);
+  await request('/admin/moderation/posts/batch/status', regular.accessToken, 403, 'PATCH', {
+    ids: batchPosts.map((post) => post.id),
+    status: 'APPROVED',
+  });
+  await request('/admin/moderation/posts/batch/status', admin.accessToken, 400, 'PATCH', {
+    ids: [batchPosts[0].id, batchPosts[0].id],
+    status: 'APPROVED',
+  });
+  await db.post.update({ where: { id: staleBatchPost.id }, data: { moderationStatus: 'REJECTED' } });
+  await request('/admin/moderation/posts/batch/status', admin.accessToken, 409, 'PATCH', {
+    ids: [batchPosts[0].id, staleBatchPost.id],
+    status: 'APPROVED',
+  });
+  assert.equal((await db.post.findUniqueOrThrow({ where: { id: batchPosts[0].id } })).moderationStatus, 'PENDING');
+
   const rejectedId = pending[0].id;
   await request(`/admin/moderation/posts/${rejectedId}/status`, regular.accessToken, 403, 'PATCH', {
     status: 'REJECTED',
@@ -114,6 +133,21 @@ try {
   );
   assert.equal(removed.status, 'REMOVED');
 
+  const batchResult = await request('/admin/moderation/posts/batch/status', admin.accessToken, 200, 'PATCH', {
+    ids: batchPosts.map((post) => post.id),
+    status: 'APPROVED',
+    reason: '批量内容合规',
+  });
+  assert.equal(batchResult.updatedCount, 2);
+  assert.equal(batchResult.skippedCount, 0);
+  assert.deepEqual(new Set(batchResult.items.map((post) => post.id)), new Set(batchPosts.map((post) => post.id)));
+  const idempotentBatch = await request('/admin/moderation/posts/batch/status', admin.accessToken, 200, 'PATCH', {
+    ids: batchPosts.map((post) => post.id),
+    status: 'APPROVED',
+  });
+  assert.equal(idempotentBatch.updatedCount, 0);
+  assert.equal(idempotentBatch.skippedCount, 2);
+
   const rejectedQueue = await request('/admin/moderation/posts?status=REJECTED&limit=20', admin.accessToken);
   const approvedQueue = await request('/admin/moderation/posts?status=APPROVED&limit=20', admin.accessToken);
   const removedQueue = await request('/admin/moderation/posts?status=REMOVED&limit=20', admin.accessToken);
@@ -132,7 +166,7 @@ try {
   assert.ok(audit.every((action) => action.actorId === admin.user.id && action.reason));
   assert.equal(
     await db.notification.count({ where: { userId: owner.user.id, targetId: { in: postIds }, type: 'MODERATION' } }),
-    3,
+    5,
   );
 
   console.log(
@@ -143,6 +177,8 @@ try {
           'moderator RBAC and invalid status rejection',
           'status-filtered cursor pagination without duplicates',
           'approve/reject/remove state transitions and queue membership',
+          'atomic batch moderation with duplicate validation and idempotent retry',
+          'stale mixed-state batch rolls back all post changes',
           'approved-only public feed excludes rejected and removed posts',
           'moderation actor/reason audit and author notifications',
         ],

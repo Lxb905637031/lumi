@@ -3,7 +3,11 @@ import { Prisma } from '@prisma/client';
 import type { CursorPage, ModerationQueueItem } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
-import type { ModerationQueueQueryDto, UpdateModerationStatusDto } from './moderation.dto';
+import type {
+  BatchUpdateModerationStatusDto,
+  ModerationQueueQueryDto,
+  UpdateModerationStatusDto,
+} from './moderation.dto';
 
 type ModeratedPost = Prisma.PostGetPayload<{
   include: { author: { select: { id: true } } };
@@ -93,6 +97,75 @@ export class ModerationService {
       return post;
     });
     return this.toQueueItem(updated);
+  }
+
+  async updatePostStatuses(ids: string[], actorId: string, input: BatchUpdateModerationStatusDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT id FROM posts
+        WHERE id IN (${Prisma.join([...ids].sort())}) AND deleted_at IS NULL
+        ORDER BY id
+        FOR UPDATE
+      `);
+      if (locked.length !== ids.length) throw new NotFoundException('审核内容不存在或已删除，请刷新后重试');
+
+      const rows = await tx.post.findMany({
+        where: { id: { in: ids }, deletedAt: null },
+        include: { author: { select: { id: true } } },
+      });
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const items: ModerationQueueItem[] = [];
+      let updatedCount = 0;
+
+      for (const id of ids) {
+        const current = byId.get(id);
+        if (!current) throw new NotFoundException('审核内容不存在或已删除，请刷新后重试');
+        if (current.moderationStatus === input.status) {
+          items.push(this.toQueueItem(current));
+          continue;
+        }
+        const validSource = input.status === 'REMOVED' ? 'APPROVED' : 'PENDING';
+        if (current.moderationStatus !== validSource) {
+          throw new ConflictException('审核状态已变化，请刷新队列后重试');
+        }
+        const updated = await tx.post.update({
+          where: { id },
+          data: { moderationStatus: input.status },
+          include: { author: { select: { id: true } } },
+        });
+        await tx.moderationAction.create({
+          data: {
+            postId: id,
+            actorId,
+            fromStatus: current.moderationStatus,
+            toStatus: input.status,
+            reason: input.reason,
+          },
+        });
+        const imageAssetIds = Array.isArray(current.imageAssetIds)
+          ? current.imageAssetIds.filter((assetId): assetId is string => typeof assetId === 'string')
+          : [];
+        if (imageAssetIds.length) {
+          await tx.mediaAsset.updateMany({
+            where: { id: { in: imageAssetIds }, ownerId: current.authorId, deletedAt: null },
+            data: { visibility: input.status === 'APPROVED' ? 'PUBLIC' : 'PRIVATE' },
+          });
+        }
+        await tx.notification.create({
+          data: {
+            userId: updated.author.id,
+            type: 'MODERATION',
+            title: input.status === 'APPROVED' ? '帖子已通过审核' : '帖子审核状态已更新',
+            body: input.reason ?? `你的帖子状态已更新为 ${input.status}`,
+            targetType: 'POST',
+            targetId: updated.id,
+          },
+        });
+        items.push(this.toQueueItem(updated));
+        updatedCount += 1;
+      }
+      return { items, updatedCount, skippedCount: ids.length - updatedCount };
+    });
   }
 
   private findPost(postId: string) {
