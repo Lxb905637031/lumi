@@ -3,6 +3,7 @@ import type { AdminMediaAsset } from '@lumi/contracts';
 import {
   listMediaModeration,
   updateMediaModerationStatus,
+  updateMediaModerationStatuses,
   type MediaReviewKind,
   type MediaReviewStatus,
 } from '../../services/moderation-api';
@@ -28,6 +29,7 @@ export function MediaReviewQueue() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string>();
   const [error, setError] = useState<string>();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(
     async (cursor?: string, append = false) => {
@@ -37,6 +39,7 @@ export function MediaReviewQueue() {
         const page = await listMediaModeration(status, kind, cursor);
         setItems((current) => (append ? [...current, ...page.items] : page.items));
         setNextCursor(page.nextCursor);
+        if (!append) setSelectedIds(new Set());
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : '图片审核队列读取失败');
       } finally {
@@ -58,8 +61,53 @@ export function MediaReviewQueue() {
     try {
       const updated = await updateMediaModerationStatus(item.id, next, item.updatedAt, reason);
       setItems((current) => current.map((row) => (row.id === item.id ? updated : row)));
+      setSelectedIds((current) => {
+        const nextIds = new Set(current);
+        nextIds.delete(item.id);
+        return nextIds;
+      });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '图片审核状态未确认，请刷新队列核对');
+    } finally {
+      setBusyId(undefined);
+    }
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedIds((current) =>
+      items.length > 0 && items.every((item) => current.has(item.id))
+        ? new Set()
+        : new Set(items.filter((item) => item.reviewStatus === 'UNREVIEWED').map((item) => item.id)),
+    );
+  };
+
+  const batchDecide = async (nextStatus: 'APPROVED' | 'REJECTED') => {
+    const selected = items.filter((item) => selectedIds.has(item.id));
+    if (!selected.length) return;
+    const reason = window.prompt(nextStatus === 'REJECTED' ? '批量拒绝原因（必填）' : '批量通过说明（可留空）', '');
+    if (reason === null || (nextStatus === 'REJECTED' && !reason.trim())) return;
+    setBusyId('batch');
+    setError(undefined);
+    try {
+      const result = await updateMediaModerationStatuses(
+        selected.map((item) => ({ id: item.id, expectedUpdatedAt: item.updatedAt })),
+        nextStatus,
+        reason,
+      );
+      const updatedById = new Map(result.items.map((item) => [item.id, item]));
+      setItems((current) => current.map((item) => updatedById.get(item.id) ?? item));
+      setSelectedIds(new Set());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '批量图片审核失败，请刷新队列核对');
     } finally {
       setBusyId(undefined);
     }
@@ -83,7 +131,10 @@ export function MediaReviewQueue() {
           <button
             key={value}
             className={`border px-3 py-2 text-xs ${status === value ? 'border-lumi-ink bg-lumi-ink text-white' : 'border-lumi-line'}`}
-            onClick={() => setStatus(value)}
+            onClick={() => {
+              setSelectedIds(new Set());
+              setStatus(value);
+            }}
           >
             {statusLabels[value]}
           </button>
@@ -118,12 +169,50 @@ export function MediaReviewQueue() {
         <p className="py-8 text-sm text-lumi-muted">当前筛选没有图片素材。</p>
       ) : (
         <div className="mt-4 divide-y divide-lumi-line">
+          <div className="flex items-center gap-3 border-b border-lumi-line py-3 text-xs text-lumi-muted">
+            <input
+              type="checkbox"
+              aria-label="选择当前页全部待审核图片"
+              disabled={status !== 'UNREVIEWED'}
+              checked={
+                items.some((item) => item.reviewStatus === 'UNREVIEWED') &&
+                items.filter((item) => item.reviewStatus === 'UNREVIEWED').every((item) => selectedIds.has(item.id))
+              }
+              onChange={toggleAll}
+            />
+            选择当前页待审核素材
+            {selectedIds.size > 0 && status === 'UNREVIEWED' && (
+              <>
+                <button
+                  className="bg-lumi-ink px-3 py-2 text-xs text-white disabled:opacity-50"
+                  disabled={busyId !== undefined}
+                  onClick={() => void batchDecide('APPROVED')}
+                >
+                  批量通过（{selectedIds.size}）
+                </button>
+                <button
+                  className="border border-lumi-line px-3 py-2 text-xs disabled:opacity-50"
+                  disabled={busyId !== undefined}
+                  onClick={() => void batchDecide('REJECTED')}
+                >
+                  批量拒绝
+                </button>
+              </>
+            )}
+          </div>
           {items.map((item) => (
             <article key={item.id} className="grid gap-4 py-4 md:grid-cols-[96px_minmax(0,1fr)_auto] md:items-center">
               <div className="aspect-square overflow-hidden bg-lumi-surface-muted">
                 {item.url ? <img className="h-full w-full object-cover" src={item.url} alt="待审核图片" /> : null}
               </div>
               <div className="min-w-0 text-sm">
+                <input
+                  type="checkbox"
+                  aria-label={`选择图片 ${item.id}`}
+                  disabled={item.reviewStatus !== 'UNREVIEWED'}
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggleSelected(item.id)}
+                />
                 <p className="font-medium">{kindLabels[item.kind]}</p>
                 <p className="mt-1 truncate text-xs text-lumi-muted">
                   素材 {item.id} · 用户 {item.ownerId}
@@ -138,14 +227,14 @@ export function MediaReviewQueue() {
                   <>
                     <button
                       className="bg-lumi-ink px-3 py-2 text-xs text-white disabled:opacity-50"
-                      disabled={busyId === item.id}
+                      disabled={busyId !== undefined}
                       onClick={() => void decide(item, 'APPROVED')}
                     >
                       通过
                     </button>
                     <button
                       className="border border-lumi-line px-3 py-2 text-xs disabled:opacity-50"
-                      disabled={busyId === item.id}
+                      disabled={busyId !== undefined}
                       onClick={() => void decide(item, 'REJECTED')}
                     >
                       拒绝

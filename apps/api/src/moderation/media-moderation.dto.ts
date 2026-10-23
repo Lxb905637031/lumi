@@ -1,6 +1,18 @@
 import { MediaReviewStatus as MediaReviewStatusEnum } from '@prisma/client';
 import type { MediaReviewStatus } from '@prisma/client';
-import { IsDateString, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
 import { CursorPaginationDto } from '../common/pagination/pagination.dto';
 
 export const mediaReviewKinds = ['PROFILE', 'CLOTHING', 'GENERATION_OUTPUT', 'UPLOAD'] as const;
@@ -22,6 +34,32 @@ export class UpdateMediaReviewDto {
 
   @IsDateString()
   expectedUpdatedAt!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+}
+
+export class MediaReviewBatchItemDto {
+  @IsString()
+  id!: string;
+
+  @IsDateString()
+  expectedUpdatedAt!: string;
+}
+
+export class BatchUpdateMediaReviewDto {
+  @IsIn([MediaReviewStatusEnum.APPROVED, MediaReviewStatusEnum.REJECTED])
+  status!: Exclude<MediaReviewStatus, 'UNREVIEWED'>;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ArrayUnique((item: MediaReviewBatchItemDto) => item.id)
+  @ValidateNested({ each: true })
+  @Type(() => MediaReviewBatchItemDto)
+  items!: MediaReviewBatchItemDto[];
 
   @IsOptional()
   @IsString()

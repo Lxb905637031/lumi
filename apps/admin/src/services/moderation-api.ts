@@ -181,6 +181,21 @@ export function updateMediaModerationStatus(
   });
 }
 
+export function updateMediaModerationStatuses(
+  items: Array<{ id: string; expectedUpdatedAt: string }>,
+  status: Exclude<MediaReviewStatus, 'UNREVIEWED'>,
+  reason: string,
+) {
+  return adminRequest<{
+    items: AdminMediaAsset[];
+    updatedCount: number;
+    skippedCount: number;
+  }>('/admin/moderation/media/batch/status', {
+    method: 'PATCH',
+    body: JSON.stringify({ items, status, reason: reason.trim() || undefined }),
+  });
+}
+
 export type AdminOverview = {
   pendingPosts: number;
   generationToday: number;

@@ -4,7 +4,12 @@ import type { AdminMediaAsset, CursorPage } from '@lumi/contracts';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaService } from '../media/media.service';
-import type { MediaReviewKind, MediaReviewQueryDto, UpdateMediaReviewDto } from './media-moderation.dto';
+import type {
+  BatchUpdateMediaReviewDto,
+  MediaReviewKind,
+  MediaReviewQueryDto,
+  UpdateMediaReviewDto,
+} from './media-moderation.dto';
 
 type MediaRow = Prisma.MediaAssetGetPayload<{ include: { _count: { select: { generationOutputs: true } } } }>;
 type ClassifiedMediaRow = { id: string; kind: MediaReviewKind; updatedAt: Date };
@@ -112,6 +117,74 @@ export class MediaModerationService {
     });
     const kinds = await this.resolveKinds([updated]);
     return this.toContract(updated, kinds.get(id) ?? 'UPLOAD');
+  }
+
+  async updateBatch(actorId: string, input: BatchUpdateMediaReviewDto) {
+    const expected = new Map(input.items.map((item) => [item.id, new Date(item.expectedUpdatedAt)]));
+    if ([...expected.values()].some((value) => Number.isNaN(value.valueOf()))) {
+      throw new ConflictException('版本时间无效，请刷新后重试');
+    }
+    const ids = input.items.map((item) => item.id);
+    const updatedRows = await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT id FROM media_assets
+        WHERE id IN (${Prisma.join([...ids].sort())}) AND deleted_at IS NULL
+        ORDER BY id
+        FOR UPDATE
+      `);
+      if (locked.length !== ids.length) throw new NotFoundException('图片素材不存在或已删除，请刷新后重试');
+      const rows = await tx.mediaAsset.findMany({
+        where: { id: { in: ids }, deletedAt: null },
+        include: { _count: { select: { generationOutputs: true } } },
+      });
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const changed: MediaRow[] = [];
+      let skippedCount = 0;
+      for (const id of ids) {
+        const current = byId.get(id);
+        if (!current) throw new NotFoundException('图片素材不存在或已删除，请刷新后重试');
+        const expectedUpdatedAt = expected.get(id);
+        if (!expectedUpdatedAt || current.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
+          throw new ConflictException('图片审核状态已变化，请刷新后重试');
+        }
+        if (current.status !== 'READY' && current.status !== 'REJECTED') {
+          throw new ConflictException('图片尚未完成处理，暂不能审核');
+        }
+        if (current.reviewStatus === input.status) {
+          skippedCount += 1;
+          changed.push(current);
+          continue;
+        }
+        const updated = await tx.mediaAsset.update({
+          where: { id },
+          data: {
+            reviewStatus: input.status,
+            reviewReason: input.reason?.trim() || null,
+            reviewedAt: new Date(),
+            reviewedById: actorId,
+            ...(input.status === MediaReviewStatus.REJECTED ? { visibility: 'PRIVATE' } : {}),
+          },
+          include: { _count: { select: { generationOutputs: true } } },
+        });
+        await tx.mediaReviewAction.create({
+          data: {
+            assetId: id,
+            actorId,
+            fromStatus: current.reviewStatus,
+            toStatus: input.status,
+            reason: input.reason?.trim() || null,
+          },
+        });
+        changed.push(updated);
+      }
+      return { changed, updatedCount: ids.length - skippedCount, skippedCount };
+    });
+    const kinds = await this.resolveKinds(updatedRows.changed);
+    return {
+      items: await Promise.all(updatedRows.changed.map((row) => this.toContract(row, kinds.get(row.id) ?? 'UPLOAD'))),
+      updatedCount: updatedRows.updatedCount,
+      skippedCount: updatedRows.skippedCount,
+    };
   }
 
   async actions(id: string, query: MediaReviewQueryDto) {

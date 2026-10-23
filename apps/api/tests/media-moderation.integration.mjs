@@ -83,6 +83,9 @@ try {
   const clothingAssetThree = await createAsset(owner.user.id, 'clothing-three');
   const unrelatedAssetOne = await createAsset(owner.user.id, 'unrelated-one');
   const unrelatedAssetTwo = await createAsset(owner.user.id, 'unrelated-two');
+  const batchAssetOne = await createAsset(owner.user.id, 'batch-one');
+  const batchAssetTwo = await createAsset(owner.user.id, 'batch-two');
+  const staleBatchAsset = await createAsset(owner.user.id, 'batch-stale');
   const profile = await request('/body-profiles', owner.accessToken, 201, 'POST', {
     name: '审核素材人物',
     sourceAssetId: profileAsset.id,
@@ -124,6 +127,42 @@ try {
   assert.equal(profileRow.kind, 'PROFILE');
   assert.equal(clothingRow.kind, 'CLOTHING');
   assert.match(profileRow.url, /^data:image\//);
+  const batchRows = [batchAssetOne, batchAssetTwo].map((asset) => page.items.find((item) => item.id === asset.id));
+  assert.ok(batchRows.every(Boolean));
+  await request('/admin/moderation/media/batch/status', normal.accessToken, 403, 'PATCH', {
+    items: batchRows.map((item) => ({ id: item.id, expectedUpdatedAt: item.updatedAt })),
+    status: 'APPROVED',
+  });
+  await request('/admin/moderation/media/batch/status', admin.accessToken, 400, 'PATCH', {
+    items: [
+      { id: batchRows[0].id, expectedUpdatedAt: batchRows[0].updatedAt },
+      { id: batchRows[0].id, expectedUpdatedAt: batchRows[0].updatedAt },
+    ],
+    status: 'APPROVED',
+  });
+  await db.mediaAsset.update({ where: { id: staleBatchAsset.id }, data: { updatedAt: new Date(Date.now() + 10_000) } });
+  const staleRow = page.items.find((item) => item.id === staleBatchAsset.id);
+  await request('/admin/moderation/media/batch/status', admin.accessToken, 409, 'PATCH', {
+    items: [
+      { id: batchRows[0].id, expectedUpdatedAt: batchRows[0].updatedAt },
+      { id: staleBatchAsset.id, expectedUpdatedAt: staleRow.updatedAt },
+    ],
+    status: 'APPROVED',
+  });
+  assert.equal((await db.mediaAsset.findUniqueOrThrow({ where: { id: batchAssetOne.id } })).reviewStatus, 'UNREVIEWED');
+  const batchResult = await request('/admin/moderation/media/batch/status', admin.accessToken, 200, 'PATCH', {
+    items: batchRows.map((item) => ({ id: item.id, expectedUpdatedAt: item.updatedAt })),
+    status: 'APPROVED',
+    reason: '批量素材合规',
+  });
+  assert.equal(batchResult.updatedCount, 2);
+  assert.equal(batchResult.skippedCount, 0);
+  const idempotentBatch = await request('/admin/moderation/media/batch/status', admin.accessToken, 200, 'PATCH', {
+    items: batchResult.items.map((item) => ({ id: item.id, expectedUpdatedAt: item.updatedAt })),
+    status: 'APPROVED',
+  });
+  assert.equal(idempotentBatch.updatedCount, 0);
+  assert.equal(idempotentBatch.skippedCount, 2);
   await request(`/admin/moderation/media/${clothingAsset.id}/status`, normal.accessToken, 403, 'PATCH', {
     status: 'REJECTED',
     expectedUpdatedAt: clothingRow.updatedAt,
@@ -192,6 +231,7 @@ try {
           'moderator-only media queue and kind resolution',
           'private signed/local media preview remains owner-scoped',
           'review action RBAC, reason and optimistic timestamp conflict',
+          'atomic batch review with duplicate validation, timestamp rollback and idempotent retry',
           'media audit history and filtered queue',
           'rejected clothing input is blocked from generation',
         ],

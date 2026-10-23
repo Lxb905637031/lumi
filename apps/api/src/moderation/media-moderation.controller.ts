@@ -5,7 +5,7 @@ import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthenticatedUser } from '../common/authenticated-request';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
-import { MediaReviewQueryDto, UpdateMediaReviewDto } from './media-moderation.dto';
+import { BatchUpdateMediaReviewDto, MediaReviewQueryDto, UpdateMediaReviewDto } from './media-moderation.dto';
 import { MediaModerationService } from './media-moderation.service';
 
 @Controller('admin/moderation/media')
@@ -17,6 +17,11 @@ export class MediaModerationController {
   @Get()
   list(@Query() query: MediaReviewQueryDto) {
     return this.moderation.list(query);
+  }
+
+  @Patch('batch/status')
+  updateBatch(@CurrentUser() user: AuthenticatedUser, @Body() dto: BatchUpdateMediaReviewDto) {
+    return this.moderation.updateBatch(user.id, dto);
   }
 
   @Get(':id/actions')
