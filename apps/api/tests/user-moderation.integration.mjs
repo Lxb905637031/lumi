@@ -108,6 +108,7 @@ try {
     'reason',
     'revokedAt',
     'revokedById',
+    'revokedReason',
     'startsAt',
   ]);
   assert.equal(muteHistory.items[0].actorId, admin.user.id);
@@ -126,6 +127,10 @@ try {
   const unmutedPage = await request(`/admin/users?search=${target.user.id}`, admin.accessToken);
   assert.equal(unmutedPage.items[0].activeMute, null);
   assert.equal((await db.userMute.findMany({ where: { userId: target.user.id, revokedAt: { not: null } } })).length, 1);
+  assert.equal(
+    (await db.userMute.findFirstOrThrow({ where: { userId: target.user.id, revokedAt: { not: null } } })).revokedReason,
+    '复核通过',
+  );
   const roleFiltered = await request(
     `/admin/users?status=ACTIVE&role=ADMIN&search=${admin.user.id}`,
     admin.accessToken,

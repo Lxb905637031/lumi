@@ -256,6 +256,7 @@ model UserMute {
   endsAt      DateTime? @map("ends_at")
   revokedAt   DateTime? @map("revoked_at")
   revokedById String?   @map("revoked_by_id")
+  revokedReason String? @map("revoked_reason")
   createdAt   DateTime  @default(now()) @map("created_at")
   user        User      @relation("UserMuteSubject", fields: [userId], references: [id], onDelete: Cascade)
   actor       User?     @relation("UserMuteActor", fields: [actorId], references: [id], onDelete: SetNull)

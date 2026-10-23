@@ -192,6 +192,7 @@ export class UserModerationService {
         endsAt: true,
         revokedAt: true,
         revokedById: true,
+        revokedReason: true,
         createdAt: true,
       },
     });
@@ -204,6 +205,7 @@ export class UserModerationService {
       endsAt: row.endsAt?.toISOString() ?? null,
       revokedAt: row.revokedAt?.toISOString() ?? null,
       revokedById: row.revokedById,
+      revokedReason: row.revokedReason,
       createdAt: row.createdAt.toISOString(),
     }));
     const last = rows[items.length - 1];
@@ -273,7 +275,10 @@ export class UserModerationService {
         data: { updatedAt: version },
       });
       if (versioned.count !== 1) throw new ConflictException('用户状态已变化，请刷新后重试');
-      await tx.userMute.update({ where: { id: active.id }, data: { revokedAt: now, revokedById: actorId } });
+      await tx.userMute.update({
+        where: { id: active.id },
+        data: { revokedAt: now, revokedById: actorId, revokedReason: input.reason.trim() },
+      });
       return tx.user.findUniqueOrThrow({
         where: { id },
         include: {

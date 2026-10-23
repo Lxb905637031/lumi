@@ -329,6 +329,7 @@ export type UserMuteAction = {
   endsAt: string | null;
   revokedAt: string | null;
   revokedById: string | null;
+  revokedReason: string | null;
   createdAt: string;
 };
 

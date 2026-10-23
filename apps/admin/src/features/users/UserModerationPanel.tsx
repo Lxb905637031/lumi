@@ -305,7 +305,9 @@ export function UserModerationPanel() {
                         <p key={mute.id} className="py-1 text-xs text-lumi-muted">
                           禁言 {new Date(mute.startsAt).toLocaleString('zh-CN')} 至{' '}
                           {mute.endsAt ? new Date(mute.endsAt).toLocaleString('zh-CN') : '永久'} ·{' '}
-                          {mute.revokedAt ? `已于 ${new Date(mute.revokedAt).toLocaleString('zh-CN')} 解除` : '未解除'}{' '}
+                          {mute.revokedAt
+                            ? `已于 ${new Date(mute.revokedAt).toLocaleString('zh-CN')} 解除：${mute.revokedReason ?? '未记录原因'}`
+                            : '未解除'}{' '}
                           · {mute.reason} · 操作者 {mute.actorId ?? '账号已删除'}
                         </p>
                       ))
