@@ -97,6 +97,59 @@ try {
   assert.equal(new Set([...firstPage.items, ...secondPage.items].map((row) => row.id)).size, 3);
   assert.ok([...firstPage.items, ...secondPage.items].every((row) => row.moderationStatus === 'PENDING'));
 
+  const batchComments = await Promise.all(
+    Array.from({ length: 2 }, (_, index) =>
+      db.comment.create({
+        data: {
+          postId: post.id,
+          authorId: author.user.id,
+          body: `Batch moderation fixture ${index}`,
+          moderationStatus: 'PENDING',
+        },
+        select: { id: true },
+      }),
+    ),
+  );
+  const staleBatchComment = await db.comment.create({
+    data: { postId: post.id, authorId: author.user.id, body: 'Stale batch fixture', moderationStatus: 'REJECTED' },
+    select: { id: true },
+  });
+  await request('/admin/moderation/comments/batch/status', author.accessToken, 403, 'PATCH', {
+    ids: batchComments.map((comment) => comment.id),
+    status: 'APPROVED',
+  });
+  await request('/admin/moderation/comments/batch/status', moderator.accessToken, 400, 'PATCH', {
+    ids: [batchComments[0].id, batchComments[0].id],
+    status: 'APPROVED',
+  });
+  await request('/admin/moderation/comments/batch/status', moderator.accessToken, 409, 'PATCH', {
+    ids: [batchComments[0].id, staleBatchComment.id],
+    status: 'APPROVED',
+  });
+  assert.equal(
+    (await db.comment.findUniqueOrThrow({ where: { id: batchComments[0].id } })).moderationStatus,
+    'PENDING',
+  );
+  const batchResult = await request('/admin/moderation/comments/batch/status', moderator.accessToken, 200, 'PATCH', {
+    ids: batchComments.map((comment) => comment.id),
+    status: 'APPROVED',
+    reason: '批量通过评论',
+  });
+  assert.deepEqual(batchResult, {
+    ids: batchComments.map((comment) => comment.id),
+    updatedCount: 2,
+    skippedCount: 0,
+  });
+  const idempotentBatch = await request(
+    '/admin/moderation/comments/batch/status',
+    moderator.accessToken,
+    200,
+    'PATCH',
+    { ids: batchComments.map((comment) => comment.id), status: 'APPROVED' },
+  );
+  assert.equal(idempotentBatch.updatedCount, 0);
+  assert.equal(idempotentBatch.skippedCount, 2);
+
   const targetId = comments[0].id;
   await request(`/admin/moderation/comments/${targetId}/status`, author.accessToken, 403, 'PATCH', {
     status: 'APPROVED',
@@ -170,7 +223,7 @@ try {
   assert.notEqual(actionPage.items[0].id, actionPageTwo.items[0].id);
   assert.equal(
     await db.notification.count({ where: { userId: author.user.id, targetId: post.id, type: 'MODERATION' } }),
-    2,
+    4,
   );
 
   console.log(
@@ -182,6 +235,7 @@ try {
           'status-filtered cursor pagination without duplicates',
           'approval moves comments between status queues',
           'approved comment removal and immutable actor/reason audit trail',
+          'atomic batch moderation with duplicate validation, rollback and idempotent retry',
           'audit history HTTP RBAC, transition fields and cursor pagination',
           'each moderation transition notifies the comment author',
         ],

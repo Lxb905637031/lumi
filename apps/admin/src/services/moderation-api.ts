@@ -124,6 +124,20 @@ export function updateCommentModerationStatus(
   });
 }
 
+export function updateCommentModerationStatuses(
+  commentIds: string[],
+  status: Exclude<ModerationStatus, 'PENDING'>,
+  reason: string,
+) {
+  return adminRequest<{ ids: string[]; updatedCount: number; skippedCount: number }>(
+    '/admin/moderation/comments/batch/status',
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ ids: commentIds, status, reason: reason.trim() || undefined }),
+    },
+  );
+}
+
 export function listCommentModerationActions(commentId: string, cursor?: string) {
   const params = new URLSearchParams({ limit: '20' });
   if (cursor) params.set('cursor', cursor);

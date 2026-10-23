@@ -1,7 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../common/pagination/pagination';
-import type { ModerationQueueQueryDto, UpdateModerationStatusDto } from './moderation.dto';
+import type {
+  BatchUpdateCommentModerationStatusDto,
+  ModerationQueueQueryDto,
+  UpdateModerationStatusDto,
+} from './moderation.dto';
 import { notifyInteraction } from '../notifications/interaction-notification';
 
 @Injectable()
@@ -87,6 +92,64 @@ export class CommentModerationService {
         }
       }
       return { id, status: input.status };
+    });
+  }
+
+  async updateBatch(ids: string[], actorId: string, input: BatchUpdateCommentModerationStatusDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT id FROM comments
+        WHERE id IN (${Prisma.join([...ids].sort())})
+        ORDER BY id
+        FOR UPDATE
+      `);
+      if (locked.length !== ids.length) throw new NotFoundException('评论不存在，请刷新后重试');
+      const rows = await tx.comment.findMany({ where: { id: { in: ids } } });
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      let updatedCount = 0;
+      for (const id of ids) {
+        const current = byId.get(id);
+        if (!current) throw new NotFoundException('评论不存在，请刷新后重试');
+        if (current.moderationStatus === input.status) continue;
+        const validSource = input.status === 'REMOVED' ? 'APPROVED' : 'PENDING';
+        if (current.moderationStatus !== validSource) throw new ConflictException('评论状态已变化，请刷新');
+        await tx.comment.update({ where: { id }, data: { moderationStatus: input.status } });
+        await tx.commentModerationAction.create({
+          data: {
+            commentId: id,
+            actorId,
+            fromStatus: current.moderationStatus,
+            toStatus: input.status,
+            reason: input.reason,
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: current.authorId,
+            type: 'MODERATION',
+            title: '评论审核状态已更新',
+            body: input.reason ?? `评论状态：${input.status}`,
+            targetType: 'POST',
+            targetId: current.postId,
+          },
+        });
+        if (input.status === 'APPROVED') {
+          const post = await tx.post.findFirst({
+            where: { id: current.postId, moderationStatus: 'APPROVED', deletedAt: null },
+            select: { authorId: true },
+          });
+          if (post) {
+            await notifyInteraction(tx, {
+              actorId: current.authorId,
+              recipientId: post.authorId,
+              postId: current.postId,
+              commentId: id,
+            });
+          }
+        }
+        updatedCount += 1;
+      }
+      return { ids, updatedCount, skippedCount: ids.length - updatedCount };
     });
   }
 

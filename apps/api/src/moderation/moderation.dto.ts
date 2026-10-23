@@ -47,6 +47,8 @@ export class BatchUpdateModerationStatusDto extends UpdateModerationStatusDto {
   ids!: string[];
 }
 
+export class BatchUpdateCommentModerationStatusDto extends BatchUpdateModerationStatusDto {}
+
 export class ReportQueueQueryDto extends CursorPaginationDto {
   @IsOptional()
   @IsIn(Object.values(ReportStatusEnum))

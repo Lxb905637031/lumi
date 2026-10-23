@@ -5,7 +5,11 @@ import { CurrentUser } from '../common/current-user.decorator';
 import type { AuthenticatedUser } from '../common/authenticated-request';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
-import { ModerationQueueQueryDto, UpdateModerationStatusDto } from './moderation.dto';
+import {
+  BatchUpdateCommentModerationStatusDto,
+  ModerationQueueQueryDto,
+  UpdateModerationStatusDto,
+} from './moderation.dto';
 import { CommentModerationService } from './comment-moderation.service';
 
 @Controller('admin/moderation/comments')
@@ -17,6 +21,11 @@ export class CommentModerationController {
   @Get()
   list(@Query() query: ModerationQueueQueryDto) {
     return this.moderation.list(query);
+  }
+
+  @Patch('batch/status')
+  updateBatch(@CurrentUser() user: AuthenticatedUser, @Body() dto: BatchUpdateCommentModerationStatusDto) {
+    return this.moderation.updateBatch(dto.ids, user.id, dto);
   }
 
   @Get(':id/actions')
