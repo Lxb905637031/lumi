@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Announcement, CursorPage } from '@lumi/contracts';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,12 +9,14 @@ import type {
   PublishAnnouncementDto,
   UpdateAnnouncementDto,
 } from './announcements.dto';
-
-const DELIVERY_BATCH_SIZE = 250;
+import { ANNOUNCEMENT_QUEUE, type AnnouncementQueue } from './announcement-queue.port';
 
 @Injectable()
 export class AnnouncementsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ANNOUNCEMENT_QUEUE) private readonly queue: AnnouncementQueue,
+  ) {}
 
   async create(authorId: string, input: CreateAnnouncementDto): Promise<Announcement> {
     const existing = await this.prisma.announcement.findFirst({
@@ -92,6 +94,7 @@ export class AnnouncementsService {
   }
 
   async publish(id: string, input: PublishAnnouncementDto): Promise<Announcement> {
+    let shouldDispatch = false;
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM announcements WHERE id = ${id} FOR UPDATE`;
       const current = await tx.announcement.findUnique({ where: { id } });
@@ -102,60 +105,25 @@ export class AnnouncementsService {
           where: { id },
           data: { status: 'SENDING', publishedAt: new Date(), version: { increment: 1 } },
         });
-        const recipients = await tx.user.findMany({ where: { status: 'ACTIVE' }, select: { id: true } });
-        await tx.announcement.update({ where: { id }, data: { recipientCount: recipients.length } });
-        for (let offset = 0; offset < recipients.length; offset += DELIVERY_BATCH_SIZE) {
-          await tx.announcementRecipient.createMany({
-            data: recipients.slice(offset, offset + DELIVERY_BATCH_SIZE).map(({ id: userId }) => ({
-              announcementId: id,
-              userId,
-            })),
-            skipDuplicates: true,
-          });
-        }
+        await tx.$executeRaw`
+          INSERT INTO announcement_recipients (announcement_id, user_id)
+          SELECT ${id}, users.id FROM users WHERE users.status = 'ACTIVE'
+          ON CONFLICT (announcement_id, user_id) DO NOTHING
+        `;
+        const recipientCount = await tx.announcementRecipient.count({ where: { announcementId: id } });
+        await tx.announcement.update({ where: { id }, data: { recipientCount } });
+        shouldDispatch = true;
       } else if (current.status === 'SENDING') {
         if (current.version !== input.expectedVersion) {
           throw new ConflictException('公告版本已变化，请刷新后重试');
         }
+        shouldDispatch = true;
       } else {
         if (current.version === input.expectedVersion) return;
         throw new ConflictException('公告已发布');
       }
     });
-
-    const announcement = await this.prisma.announcement.findUniqueOrThrow({ where: { id } });
-    while (true) {
-      const pending = await this.prisma.announcementRecipient.findMany({
-        where: { announcementId: id, deliveredAt: null },
-        orderBy: { userId: 'asc' },
-        take: DELIVERY_BATCH_SIZE,
-        select: { userId: true },
-      });
-      if (!pending.length) break;
-      const userIds = pending.map(({ userId }) => userId);
-      await this.prisma.$transaction([
-        this.prisma.notification.createMany({
-          data: userIds.map((userId) => ({
-            userId,
-            type: 'SYSTEM' as const,
-            title: announcement.title,
-            body: announcement.body,
-            targetType: 'ANNOUNCEMENT',
-            targetId: id,
-            eventKey: `announcement:${id}:${userId}`,
-          })),
-          skipDuplicates: true,
-        }),
-        this.prisma.announcementRecipient.updateMany({
-          where: { announcementId: id, userId: { in: userIds }, deliveredAt: null },
-          data: { deliveredAt: new Date() },
-        }),
-      ]);
-    }
-    await this.prisma.announcement.updateMany({
-      where: { id, status: 'SENDING' },
-      data: { status: 'SENT', sentAt: new Date() },
-    });
+    if (shouldDispatch) await this.queue.enqueue({ announcementId: id });
     return this.get(id);
   }
 

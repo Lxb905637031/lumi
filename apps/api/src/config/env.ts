@@ -79,6 +79,20 @@ class Environment {
   @Max(60_000)
   GENERATION_QUEUE_BACKOFF_MS = 1_000;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  ANNOUNCEMENT_QUEUE_ATTEMPTS = 3;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(60_000)
+  ANNOUNCEMENT_QUEUE_BACKOFF_MS = 1_000;
+
   @Type(() => Number)
   @IsInt()
   @Min(0)

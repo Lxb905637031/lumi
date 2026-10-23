@@ -22,10 +22,20 @@ export function AnnouncementComposer() {
   const selectedDraft = useMemo(() => selected?.status === 'DRAFT', [selected]);
   const canPublish = selected?.status === 'DRAFT' || selected?.status === 'SENDING';
 
-  const refresh = () => listAnnouncements().then((page) => setItems(page.items));
+  const refresh = () =>
+    listAnnouncements().then((page) => {
+      setItems(page.items);
+      setSelected((current) => (current ? (page.items.find((item) => item.id === current.id) ?? current) : current));
+    });
   useEffect(() => {
     void refresh().catch(() => setError('公告列表加载失败'));
   }, []);
+
+  useEffect(() => {
+    if (!items.some((item) => item.status === 'SENDING')) return;
+    const timer = window.setInterval(() => void refresh().catch(() => setError('公告状态刷新失败')), 1500);
+    return () => window.clearInterval(timer);
+  }, [items]);
 
   const reset = () => {
     setSelected(undefined);
@@ -73,7 +83,7 @@ export function AnnouncementComposer() {
     try {
       const next = await publishAnnouncement(selected.id, selected.version);
       setSelected(next);
-      setNotice(`已发送 ${next.recipientCount} 位活跃用户`);
+      setNotice('公告已进入发送队列');
       await refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '发布失败');
@@ -125,7 +135,11 @@ export function AnnouncementComposer() {
           )}
           {notice && (
             <p className="mt-3 text-sm text-lumi-brand" role="status">
-              {notice}
+              {notice === '公告已进入发送队列' && selected?.status === 'SENDING'
+                ? `发送中 ${selected.deliveredCount}/${selected.recipientCount ?? 0} 位活跃用户`
+                : notice === '公告已进入发送队列'
+                  ? `已发送 ${selected?.deliveredCount ?? 0}/${selected?.recipientCount ?? 0} 位活跃用户`
+                  : notice}
             </p>
           )}
           <div className="mt-5 flex flex-wrap gap-3">

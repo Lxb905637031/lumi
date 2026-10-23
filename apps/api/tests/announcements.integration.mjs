@@ -44,6 +44,15 @@ async function hashPassword(password) {
   return `scrypt$${salt}$${derived.toString('hex')}`;
 }
 
+async function waitForSent(id, token) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const result = await request(`/admin/announcements/${id}`, token);
+    if (result.status === 'SENT') return result;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.fail('announcement did not reach SENT within 3 seconds');
+}
+
 try {
   assert.equal((await request('/system/bootstrap')).freeMode, true);
   const owner = await login('owner');
@@ -78,9 +87,10 @@ try {
   let result = await request(`/admin/announcements/${draft.id}/publish`, admin.accessToken, 201, 'POST', {
     expectedVersion: 2,
   });
-  assert.equal(result.status, 'SENT');
+  assert.ok(['SENDING', 'SENT'].includes(result.status));
   assert.equal(result.version, 3);
   assert.equal(result.recipientCount, activeUserCount);
+  result = await waitForSent(draft.id, admin.accessToken);
   assert.equal(result.deliveredCount, activeUserCount);
   const repeat = await request(`/admin/announcements/${draft.id}/publish`, admin.accessToken, 201, 'POST', {
     expectedVersion: 3,
