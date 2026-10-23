@@ -1,6 +1,6 @@
 import { UserRole as UserRoleEnum, UserStatus as UserStatusEnum } from '@prisma/client';
 import type { UserRole, UserStatus } from '@prisma/client';
-import { IsIn, IsOptional, IsString, IsDateString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsDateString, Matches, MaxLength, MinLength } from 'class-validator';
 import { CursorPaginationDto } from '../common/pagination/pagination.dto';
 
 export class UserModerationQueryDto extends CursorPaginationDto {
@@ -32,5 +32,20 @@ export class UpdateUserModerationDto {
 
   @IsString()
   @MaxLength(500)
+  reason!: string;
+}
+
+export class MuteUserDto {
+  @IsDateString()
+  expectedUpdatedAt!: string;
+
+  @IsOptional()
+  @IsDateString()
+  endsAt?: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  @Matches(/\S/, { message: '禁言原因不能为空白' })
   reason!: string;
 }

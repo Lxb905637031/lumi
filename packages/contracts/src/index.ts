@@ -81,6 +81,15 @@ export type AdminUser = {
   updatedAt: string;
   postCount: number;
   reportCount: number;
+  activeMute: UserMuteSummary | null;
+};
+
+export type UserMuteSummary = {
+  id: string;
+  reason: string;
+  startsAt: string;
+  endsAt: string | null;
+  createdAt: string;
 };
 
 export type AdminMediaAsset = {

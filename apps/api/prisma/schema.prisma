@@ -121,24 +121,27 @@ model User {
   sessions                 UserSession[]
   clothingItems            ClothingItem[]
   moderationActions        ModerationAction[]        @relation("ModerationActor")
-  userModerationActions    UserModerationAction[]   @relation("UserModerationSubject")
-  performedUserActions      UserModerationAction[]   @relation("UserModerationActor")
-  mediaReviewActions        MediaReviewAction[]      @relation("MediaReviewActor")
+  userModerationActions    UserModerationAction[]    @relation("UserModerationSubject")
+  performedUserActions     UserModerationAction[]    @relation("UserModerationActor")
+  mutes                    UserMute[]                @relation("UserMuteSubject")
+  issuedMutes              UserMute[]                @relation("UserMuteActor")
+  revokedMutes             UserMute[]                @relation("UserMuteRevoker")
+  mediaReviewActions       MediaReviewAction[]       @relation("MediaReviewActor")
   likes                    PostLike[]
   bookmarks                PostBookmark[]
   reports                  PostReport[]
-  resolvedReports          PostReport[]             @relation("ReportResolver")
+  resolvedReports          PostReport[]              @relation("ReportResolver")
   notifications            Notification[]
   commentModerationActions CommentModerationAction[]
   adminCredential          AdminCredential?
   quotaAccount             QuotaAccount?
-  following               Follow[]                  @relation("Follower")
-  followers               Follow[]                  @relation("Following")
+  following                Follow[]                  @relation("Follower")
+  followers                Follow[]                  @relation("Following")
   accountDeletion          AccountDeletionRequest?
   dataExports              DataExportRequest[]
-  announcements            Announcement[]           @relation("AnnouncementAuthor")
+  announcements            Announcement[]            @relation("AnnouncementAuthor")
   announcementRecipients   AnnouncementRecipient[]
-  createdChallenges        Challenge[]              @relation("ChallengeCreator")
+  createdChallenges        Challenge[]               @relation("ChallengeCreator")
   challengeParticipants    ChallengeParticipant[]
 
   @@map("users")
@@ -161,33 +164,33 @@ model UserSession {
 }
 
 model AccountDeletionRequest {
-  id          String                @id @default(cuid())
-  userId      String                @unique @map("user_id")
-  status      AccountDeletionStatus @default(REQUESTED)
-  requestedAt DateTime              @default(now()) @map("requested_at")
-  scheduledFor DateTime             @map("scheduled_for")
-  startedAt   DateTime?             @map("started_at")
-  completedAt DateTime?             @map("completed_at")
-  cancelledAt DateTime?             @map("cancelled_at")
-  failureCode String?               @map("failure_code")
-  createdAt   DateTime              @default(now()) @map("created_at")
-  updatedAt   DateTime              @updatedAt @map("updated_at")
-  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events      AccountDeletionEvent[]
+  id           String                 @id @default(cuid())
+  userId       String                 @unique @map("user_id")
+  status       AccountDeletionStatus  @default(REQUESTED)
+  requestedAt  DateTime               @default(now()) @map("requested_at")
+  scheduledFor DateTime               @map("scheduled_for")
+  startedAt    DateTime?              @map("started_at")
+  completedAt  DateTime?              @map("completed_at")
+  cancelledAt  DateTime?              @map("cancelled_at")
+  failureCode  String?                @map("failure_code")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events       AccountDeletionEvent[]
 
   @@index([status, scheduledFor])
   @@map("account_deletion_requests")
 }
 
 model AccountDeletionEvent {
-  id         String                @id @default(cuid())
-  requestId  String                @map("request_id")
+  id         String                 @id @default(cuid())
+  requestId  String                 @map("request_id")
   fromStatus AccountDeletionStatus? @map("from_status")
-  toStatus   AccountDeletionStatus @map("to_status")
-  actorType  String                @map("actor_type")
-  actorId    String?               @map("actor_id")
+  toStatus   AccountDeletionStatus  @map("to_status")
+  actorType  String                 @map("actor_type")
+  actorId    String?                @map("actor_id")
   metadata   Json?
-  createdAt  DateTime              @default(now()) @map("created_at")
+  createdAt  DateTime               @default(now()) @map("created_at")
   request    AccountDeletionRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId, createdAt])
@@ -195,18 +198,18 @@ model AccountDeletionEvent {
 }
 
 model DataExportRequest {
-  id          String           @id @default(cuid())
-  userId      String           @map("user_id")
-  status      DataExportStatus @default(REQUESTED)
-  requestedAt DateTime         @default(now()) @map("requested_at")
+  id           String           @id @default(cuid())
+  userId       String           @map("user_id")
+  status       DataExportStatus @default(REQUESTED)
+  requestedAt  DateTime         @default(now()) @map("requested_at")
   processingAt DateTime?        @map("processing_at")
   readyAt      DateTime?        @map("ready_at")
   expiresAt    DateTime?        @map("expires_at")
-  failureCode String?          @map("failure_code")
-  payload     Json?
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  failureCode  String?          @map("failure_code")
+  payload      Json?
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -244,6 +247,25 @@ model UserModerationAction {
   @@map("user_moderation_actions")
 }
 
+model UserMute {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  actorId     String?   @map("actor_id")
+  reason      String
+  startsAt    DateTime  @default(now()) @map("starts_at")
+  endsAt      DateTime? @map("ends_at")
+  revokedAt   DateTime? @map("revoked_at")
+  revokedById String?   @map("revoked_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation("UserMuteSubject", fields: [userId], references: [id], onDelete: Cascade)
+  actor       User?     @relation("UserMuteActor", fields: [actorId], references: [id], onDelete: SetNull)
+  revokedBy   User?     @relation("UserMuteRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, startsAt, endsAt, revokedAt])
+  @@index([actorId, createdAt])
+  @@map("user_mutes")
+}
+
 model BodyProfile {
   id            String               @id @default(cuid())
   userId        String               @map("user_id")
@@ -274,33 +296,33 @@ model BodyProfileVersion {
 }
 
 model MediaAsset {
-  id                  String             @id @default(cuid())
-  ownerId             String             @map("owner_id")
-  objectKey           String             @unique @map("object_key")
-  storageDriver       String             @default("local") @map("storage_driver")
-  status              MediaStatus        @default(READY)
-  reviewStatus        MediaReviewStatus  @default(UNREVIEWED) @map("review_status")
-  reviewReason        String?            @map("review_reason")
-  reviewedAt          DateTime?          @map("reviewed_at")
-  reviewedById        String?            @map("reviewed_by_id")
-  stagingObjectKey    String?            @unique @map("staging_object_key")
-  uploadRequestKey    String?            @map("upload_request_key")
-  uploadMimeType      String?            @map("upload_mime_type")
-  uploadByteSize      Int?               @map("upload_byte_size")
-  uploadExpiresAt     DateTime?          @map("upload_expires_at")
-  processingToken     String?            @map("processing_token")
-  processingStartedAt DateTime?          @map("processing_started_at")
+  id                  String              @id @default(cuid())
+  ownerId             String              @map("owner_id")
+  objectKey           String              @unique @map("object_key")
+  storageDriver       String              @default("local") @map("storage_driver")
+  status              MediaStatus         @default(READY)
+  reviewStatus        MediaReviewStatus   @default(UNREVIEWED) @map("review_status")
+  reviewReason        String?             @map("review_reason")
+  reviewedAt          DateTime?           @map("reviewed_at")
+  reviewedById        String?             @map("reviewed_by_id")
+  stagingObjectKey    String?             @unique @map("staging_object_key")
+  uploadRequestKey    String?             @map("upload_request_key")
+  uploadMimeType      String?             @map("upload_mime_type")
+  uploadByteSize      Int?                @map("upload_byte_size")
+  uploadExpiresAt     DateTime?           @map("upload_expires_at")
+  processingToken     String?             @map("processing_token")
+  processingStartedAt DateTime?           @map("processing_started_at")
   width               Int?
   height              Int?
-  mimeType            String             @map("mime_type")
-  byteSize            Int                @map("byte_size")
+  mimeType            String              @map("mime_type")
+  byteSize            Int                 @map("byte_size")
   sha256              String
-  visibility          String             @default("PRIVATE")
-  previewData         String?            @map("preview_data") @db.Text
-  deletedAt           DateTime?          @map("deleted_at")
-  createdAt           DateTime           @default(now()) @map("created_at")
-  updatedAt           DateTime           @updatedAt @map("updated_at")
-  owner               User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  visibility          String              @default("PRIVATE")
+  previewData         String?             @map("preview_data") @db.Text
+  deletedAt           DateTime?           @map("deleted_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  owner               User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   generationOutputs   GenerationOutput[]
   reviewActions       MediaReviewAction[]
 
@@ -312,15 +334,15 @@ model MediaAsset {
 }
 
 model MediaReviewAction {
-  id         String           @id @default(cuid())
-  assetId    String           @map("asset_id")
-  actorId    String           @map("actor_id")
+  id         String            @id @default(cuid())
+  assetId    String            @map("asset_id")
+  actorId    String            @map("actor_id")
   fromStatus MediaReviewStatus @map("from_status")
   toStatus   MediaReviewStatus @map("to_status")
   reason     String?
-  createdAt  DateTime         @default(now()) @map("created_at")
-  asset      MediaAsset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  actor      User             @relation("MediaReviewActor", fields: [actorId], references: [id], onDelete: Restrict)
+  createdAt  DateTime          @default(now()) @map("created_at")
+  asset      MediaAsset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  actor      User              @relation("MediaReviewActor", fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([assetId, createdAt])
   @@index([actorId, createdAt])
@@ -481,28 +503,28 @@ model Post {
   reports           PostReport[]
   challenge         Challenge?         @relation(fields: [challengeId], references: [id], onDelete: SetNull)
 
+  @@unique([authorId, idempotencyKey])
   @@index([moderationStatus, createdAt])
   @@index([topic, moderationStatus, createdAt])
   @@index([challengeId, moderationStatus, createdAt])
   @@index([authorId, createdAt])
-  @@unique([authorId, idempotencyKey])
   @@index([imageAssetIds], type: Gin)
   @@map("posts")
 }
 
 model Challenge {
-  id          String                @id @default(cuid())
-  slug        String                @unique
-  title       String
-  description String
-  status      ChallengeStatus       @default(DRAFT)
-  startsAt    DateTime              @map("starts_at")
-  endsAt      DateTime              @map("ends_at")
-  createdById String                @map("created_by_id")
-  createdAt   DateTime              @default(now()) @map("created_at")
-  updatedAt   DateTime              @updatedAt @map("updated_at")
-  creator     User                  @relation("ChallengeCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  posts       Post[]
+  id           String                 @id @default(cuid())
+  slug         String                 @unique
+  title        String
+  description  String
+  status       ChallengeStatus        @default(DRAFT)
+  startsAt     DateTime               @map("starts_at")
+  endsAt       DateTime               @map("ends_at")
+  createdById  String                 @map("created_by_id")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  creator      User                   @relation("ChallengeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  posts        Post[]
   participants ChallengeParticipant[]
 
   @@index([status, startsAt, endsAt])
@@ -633,19 +655,19 @@ model Notification {
 }
 
 model Announcement {
-  id             String             @id @default(cuid())
-  authorId       String?            @map("author_id")
-  idempotencyKey String             @map("idempotency_key")
+  id             String                  @id @default(cuid())
+  authorId       String?                 @map("author_id")
+  idempotencyKey String                  @map("idempotency_key")
   title          String
   body           String
-  status         AnnouncementStatus @default(DRAFT)
+  status         AnnouncementStatus      @default(DRAFT)
   version        Int                     @default(1)
-  recipientCount Int?               @map("recipient_count")
+  recipientCount Int?                    @map("recipient_count")
   publishedAt    DateTime?               @map("published_at")
   sentAt         DateTime?               @map("sent_at")
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
-  author         User?              @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  author         User?                   @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   recipients     AnnouncementRecipient[]
 
   @@unique([authorId, idempotencyKey])
@@ -668,13 +690,13 @@ model AnnouncementRecipient {
 }
 
 model RuntimeConfig {
-  id          String   @id @default(cuid())
-  configKey   String   @map("config_key")
-  version     Int
-  value       Json
-  reason      String
-  actorId     String   @map("actor_id")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  configKey String   @map("config_key")
+  version   Int
+  value     Json
+  reason    String
+  actorId   String   @map("actor_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([configKey, version])
   @@index([configKey, createdAt])

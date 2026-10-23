@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type { Prisma as PrismaTypes } from '@prisma/client';
@@ -185,6 +185,7 @@ export class CommunityService {
         if (existing.deletedAt) throw new ConflictException('原发布内容已删除，请勿重复发布');
         return existing;
       }
+      await this.assertNotMuted(tx, userId);
       // Lock in stable order to serialize with deletion; no external storage work under this lock.
       for (const id of [...imageAssetIds].sort())
         await tx.$queryRaw`SELECT id FROM media_assets WHERE id = ${id} AND owner_id = ${userId} FOR UPDATE`;
@@ -269,12 +270,29 @@ export class CommunityService {
   }
 
   async addComment(userId: string, postId: string, body: string): Promise<CommunityComment> {
-    await this.assertApproved(postId);
-    const comment = await this.prisma.comment.create({
-      data: { postId, authorId: userId, body },
-      include: { author: { select: { id: true, wxOpenId: true } } },
+    const comment = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR NO KEY UPDATE`;
+      await this.assertNotMuted(tx, userId);
+      const post = await tx.post.findFirst({
+        where: { id: postId, moderationStatus: 'APPROVED', deletedAt: null },
+        select: { id: true },
+      });
+      if (!post) throw new NotFoundException('帖子不存在');
+      return tx.comment.create({
+        data: { postId, authorId: userId, body },
+        include: { author: { select: { id: true, wxOpenId: true } } },
+      });
     });
     return this.toComment(comment);
+  }
+
+  private async assertNotMuted(tx: PrismaTypes.TransactionClient, userId: string) {
+    const now = new Date();
+    const mute = await tx.userMute.findFirst({
+      where: { userId, revokedAt: null, startsAt: { lte: now }, OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+      select: { id: true },
+    });
+    if (mute) throw new ForbiddenException('账号当前处于禁言状态，暂不可发布内容');
   }
 
   async removeComment(userId: string, commentId: string) {

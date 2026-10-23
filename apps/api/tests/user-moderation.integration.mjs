@@ -57,12 +57,75 @@ try {
   });
   const admin = await request('/auth/admin/login', undefined, 201, 'POST', { username, password });
 
+  const activePost = await db.post.create({
+    data: {
+      authorId: target.user.id,
+      title: 'mute integration fixture',
+      body: 'private test post',
+      imageAssetIds: [],
+      moderationStatus: 'APPROVED',
+    },
+  });
+
   await request('/admin/users', normal.accessToken, 403);
   let page = await request('/admin/users?status=ACTIVE&limit=50', admin.accessToken);
   const listed = page.items.find((item) => item.id === target.user.id);
   assert.ok(listed);
   assert.equal(listed.status, 'ACTIVE');
   assert.equal(typeof listed.postCount, 'number');
+  await request(`/admin/users/${target.user.id}/mute`, normal.accessToken, 403, 'POST', {
+    expectedUpdatedAt: listed.updatedAt,
+    reason: '权限校验',
+  });
+  await request(`/admin/users/${target.user.id}/mute`, admin.accessToken, 201, 'POST', {
+    expectedUpdatedAt: listed.updatedAt,
+    endsAt: new Date(Date.now() + 60_000).toISOString(),
+    reason: '测试禁言',
+  });
+  const mutedPage = await request(`/admin/users?search=${target.user.id}`, admin.accessToken);
+  const mutedUser = mutedPage.items[0];
+  assert.ok(mutedUser.activeMute);
+  assert.equal(mutedUser.activeMute.reason, '测试禁言');
+  await request(`/admin/users/${target.user.id}/unmute`, admin.accessToken, 409, 'POST', {
+    expectedUpdatedAt: listed.updatedAt,
+    reason: '过期版本不应写入',
+  });
+  await request('/community/posts', target.accessToken, 403, 'POST', {
+    idempotencyKey: randomUUID(),
+    title: 'blocked post',
+    body: 'blocked while muted',
+    imageAssetIds: ['missing-asset'],
+  });
+  await request(`/community/posts/${activePost.id}/comments`, target.accessToken, 403, 'POST', {
+    body: 'blocked comment',
+  });
+  const muteHistory = await request(`/admin/users/${target.user.id}/mutes?limit=20`, admin.accessToken);
+  assert.deepEqual(Object.keys(muteHistory.items[0]).sort(), [
+    'actorId',
+    'createdAt',
+    'endsAt',
+    'id',
+    'reason',
+    'revokedAt',
+    'revokedById',
+    'startsAt',
+  ]);
+  assert.equal(muteHistory.items[0].actorId, admin.user.id);
+  await db.userMute.update({ where: { id: muteHistory.items[0].id }, data: { endsAt: new Date(Date.now() - 1000) } });
+  await request(`/community/posts/${activePost.id}/comments`, target.accessToken, 201, 'POST', {
+    body: 'available after expiry',
+  });
+  const renewed = await request(`/admin/users/${target.user.id}/mute`, admin.accessToken, 201, 'POST', {
+    expectedUpdatedAt: mutedUser.updatedAt,
+    reason: '撤销闭环测试',
+  });
+  await request(`/admin/users/${target.user.id}/unmute`, admin.accessToken, 201, 'POST', {
+    expectedUpdatedAt: renewed.updatedAt,
+    reason: '复核通过',
+  });
+  const unmutedPage = await request(`/admin/users?search=${target.user.id}`, admin.accessToken);
+  assert.equal(unmutedPage.items[0].activeMute, null);
+  assert.equal((await db.userMute.findMany({ where: { userId: target.user.id, revokedAt: { not: null } } })).length, 1);
   const roleFiltered = await request(
     `/admin/users?status=ACTIVE&role=ADMIN&search=${admin.user.id}`,
     admin.accessToken,
@@ -73,7 +136,7 @@ try {
 
   const suspended = await request(`/admin/users/${target.user.id}/status`, admin.accessToken, 200, 'PATCH', {
     status: 'SUSPENDED',
-    expectedUpdatedAt: listed.updatedAt,
+    expectedUpdatedAt: unmutedPage.items[0].updatedAt,
     reason: '违反社区规范',
   });
   assert.equal(suspended.status, 'SUSPENDED');
@@ -139,6 +202,7 @@ try {
           'optimistic timestamp conflict',
           'unban and role audit transitions',
           'self-protection for administrator account',
+          'admin-only timed/permanent mute, community write rejection, expiry and audited revoke',
         ],
         mode: 'Real loopback HTTP/PostgreSQL with disposable local fixture users; no external services',
       },

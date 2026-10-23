@@ -321,6 +321,31 @@ export function updateAdminUser(
   });
 }
 
+export type UserMuteAction = {
+  id: string;
+  actorId: string | null;
+  reason: string;
+  startsAt: string;
+  endsAt: string | null;
+  revokedAt: string | null;
+  revokedById: string | null;
+  createdAt: string;
+};
+
+export function listUserMutes(id: string, cursor?: string) {
+  const params = new URLSearchParams({ limit: '20' });
+  if (cursor) params.set('cursor', cursor);
+  return adminRequest<CursorPage<UserMuteAction>>(`/admin/users/${id}/mutes?${params.toString()}`);
+}
+
+export function muteAdminUser(id: string, input: { expectedUpdatedAt: string; endsAt?: string; reason: string }) {
+  return adminRequest<AdminUser>(`/admin/users/${id}/mute`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function unmuteAdminUser(id: string, input: { expectedUpdatedAt: string; reason: string }) {
+  return adminRequest<AdminUser>(`/admin/users/${id}/unmute`, { method: 'POST', body: JSON.stringify(input) });
+}
+
 export type UserModerationAction = {
   id: string;
   actorId: string | null;

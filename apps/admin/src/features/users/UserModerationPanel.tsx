@@ -4,7 +4,11 @@ import {
   listAdminUsers,
   listUserModerationActions,
   updateAdminUser,
+  muteAdminUser,
+  unmuteAdminUser,
+  listUserMutes,
   type UserModerationAction,
+  type UserMuteAction,
 } from '../../services/moderation-api';
 
 const statusLabels: Record<UserStatus, string> = { ACTIVE: '正常', SUSPENDED: '已封禁', DELETED: '已注销' };
@@ -20,6 +24,7 @@ export function UserModerationPanel() {
   const [busyId, setBusyId] = useState<string>();
   const [error, setError] = useState<string>();
   const [history, setHistory] = useState<Record<string, UserModerationAction[]>>({});
+  const [muteHistory, setMuteHistory] = useState<Record<string, UserMuteAction[]>>({});
   const historyCursors = useRef<Record<string, string | null>>({});
   const listCursor = useRef<string | null>(null);
 
@@ -87,18 +92,50 @@ export function UserModerationPanel() {
     }
   };
 
+  const changeMute = async (item: AdminUser, active: boolean) => {
+    const reason = window.prompt(active ? '禁言原因（必填）' : '解除禁言原因（必填）', '');
+    if (reason === null || !reason.trim()) return;
+    let endsAt: string | undefined;
+    if (active) {
+      const expiry = window.prompt('禁言结束时间（ISO 8601；留空为永久）', '');
+      if (expiry === null) return;
+      if (expiry.trim()) {
+        const parsed = new Date(expiry);
+        if (Number.isNaN(parsed.valueOf()) || parsed <= new Date()) {
+          setError('结束时间无效，必须填写未来时间的 ISO 8601 值');
+          return;
+        }
+        endsAt = parsed.toISOString();
+      }
+    }
+    setBusyId(item.id);
+    setError(undefined);
+    try {
+      const input = { expectedUpdatedAt: item.updatedAt, reason: reason.trim(), ...(endsAt ? { endsAt } : {}) };
+      const updated = active ? await muteAdminUser(item.id, input) : await unmuteAdminUser(item.id, input);
+      setItems((current) => current.map((row) => (row.id === item.id ? updated : row)));
+      const records = await listUserMutes(item.id);
+      setMuteHistory((current) => ({ ...current, [item.id]: records.items }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '禁言状态更新失败，请刷新后重试');
+    } finally {
+      setBusyId(undefined);
+    }
+  };
+
   const showHistory = async (id: string, append = false) => {
     setError(undefined);
     try {
-      const actions = await listUserModerationActions(
-        id,
-        append ? (historyCursors.current[id] ?? undefined) : undefined,
-      );
+      const [actions, mutes] = await Promise.all([
+        listUserModerationActions(id, append ? (historyCursors.current[id] ?? undefined) : undefined),
+        append ? Promise.resolve(null) : listUserMutes(id),
+      ]);
       historyCursors.current[id] = actions.nextCursor;
       setHistory((current) => ({
         ...current,
         [id]: append ? [...(current[id] ?? []), ...actions.items] : actions.items,
       }));
+      if (mutes) setMuteHistory((current) => ({ ...current, [id]: mutes.items }));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '审计记录读取失败');
     }
@@ -167,12 +204,17 @@ export function UserModerationPanel() {
         <div className="mt-4 divide-y divide-lumi-line">
           {items.map((item) => {
             const actionHistory = history[item.id];
+            const userMuteHistory = muteHistory[item.id];
             return (
               <article key={item.id} className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{item.id}</p>
                   <p className="mt-1 text-xs text-lumi-muted">
-                    {statusLabels[item.status]} · {item.role} · 帖子 {item.postCount} · 举报 {item.reportCount} · 注册{' '}
+                    {statusLabels[item.status]} · {item.role} ·{' '}
+                    {item.activeMute
+                      ? `已禁言至 ${item.activeMute.endsAt ? new Date(item.activeMute.endsAt).toLocaleString('zh-CN') : '永久'}`
+                      : '未禁言'}{' '}
+                    · 帖子 {item.postCount} · 举报 {item.reportCount} · 注册{' '}
                     {new Date(item.createdAt).toLocaleDateString('zh-CN')}
                   </p>
                 </div>
@@ -209,6 +251,24 @@ export function UserModerationPanel() {
                       解封
                     </button>
                   )}
+                  {item.status !== 'DELETED' &&
+                    (item.activeMute ? (
+                      <button
+                        className="border border-lumi-line px-3 py-2 text-xs disabled:opacity-50"
+                        disabled={busyId === item.id}
+                        onClick={() => void changeMute(item, false)}
+                      >
+                        解除禁言
+                      </button>
+                    ) : (
+                      <button
+                        className="border border-lumi-line px-3 py-2 text-xs disabled:opacity-50"
+                        disabled={busyId === item.id || item.status !== 'ACTIVE'}
+                        onClick={() => void changeMute(item, true)}
+                      >
+                        禁言
+                      </button>
+                    ))}
                   <button
                     className="border border-lumi-line px-3 py-2 text-xs"
                     onClick={() => void showHistory(item.id)}
@@ -235,6 +295,22 @@ export function UserModerationPanel() {
                       >
                         加载更早记录
                       </button>
+                    )}
+                  </div>
+                )}
+                {userMuteHistory && (
+                  <div className="col-span-full border-l-2 border-lumi-line pl-3">
+                    {userMuteHistory.length ? (
+                      userMuteHistory.map((mute) => (
+                        <p key={mute.id} className="py-1 text-xs text-lumi-muted">
+                          禁言 {new Date(mute.startsAt).toLocaleString('zh-CN')} 至{' '}
+                          {mute.endsAt ? new Date(mute.endsAt).toLocaleString('zh-CN') : '永久'} ·{' '}
+                          {mute.revokedAt ? `已于 ${new Date(mute.revokedAt).toLocaleString('zh-CN')} 解除` : '未解除'}{' '}
+                          · {mute.reason} · 操作者 {mute.actorId ?? '账号已删除'}
+                        </p>
+                      ))
+                    ) : (
+                      <p className="py-1 text-xs text-lumi-muted">暂无禁言记录</p>
                     )}
                   </div>
                 )}
