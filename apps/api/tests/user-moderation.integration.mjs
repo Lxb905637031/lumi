@@ -184,6 +184,22 @@ try {
     reason: '授予内容审核职责',
   });
   assert.equal(roleChanged.role, 'MODERATOR');
+  const moderator = await login('target');
+  await request('/admin/moderation/posts?limit=1', moderator.accessToken);
+  await request('/admin/moderation/comments?limit=1', moderator.accessToken);
+  await request('/admin/moderation/media?limit=1', moderator.accessToken);
+  await request('/admin/moderation/reports?limit=1', moderator.accessToken);
+  await request('/admin/overview', moderator.accessToken);
+  await request('/admin/audit?limit=1', moderator.accessToken, 403);
+  await request('/admin/users?limit=1', moderator.accessToken, 403);
+  await request('/admin/runtime-configs', moderator.accessToken, 403);
+  await request('/admin/announcements?limit=1', moderator.accessToken, 403);
+  await request('/admin/challenges?limit=1', moderator.accessToken, 403);
+  await request('/admin/privacy/process', moderator.accessToken, 403, 'POST');
+  await request(`/admin/moderation/posts/${activePost.id}/status`, moderator.accessToken, 200, 'PATCH', {
+    status: 'REMOVED',
+    reason: '权限矩阵写操作验证',
+  });
   await request(`/admin/users/${target.user.id}/status`, admin.accessToken, 200, 'PATCH', {
     role: 'USER',
     expectedUpdatedAt: roleChanged.updatedAt,
@@ -208,6 +224,7 @@ try {
           'unban and role audit transitions',
           'self-protection for administrator account',
           'admin-only timed/permanent mute, community write rejection, expiry and audited revoke',
+          'moderator route permissions allow moderation/operations but deny audit and sensitive administration',
         ],
         mode: 'Real loopback HTTP/PostgreSQL with disposable local fixture users; no external services',
       },
