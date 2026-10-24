@@ -49,6 +49,7 @@ export function useDidShow(callback) {
   }, []);
 }
 export function useDidHide() {}
+export function useShareAppMessage() {}
 export function useRouter() {
   return { params: { id: 'sample', collection: new URLSearchParams(location.search).get('collection') } };
 }
@@ -67,6 +68,10 @@ const taro = {
   getStorageSync: () => '',
   setStorageSync: () => undefined,
   previewImage: async () => undefined,
+  showShareMenu: async () => undefined,
+  downloadFile: async () => ({ statusCode: 200, tempFilePath: '/tmp/lumi-preview.jpg' }),
+  saveImageToPhotosAlbum: async () => undefined,
+  openSetting: async () => ({ authSetting: {} }),
   chooseImage: async () => {
     throw new Error('组件预览不访问相册，请在微信中验收上传');
   },

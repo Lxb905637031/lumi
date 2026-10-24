@@ -50,6 +50,16 @@ const job = {
   createdAt: now,
   outputs: [{ id: 'result', assetId: 'person', selectedAt: null, savedAt: null }],
 };
+const generationShare = {
+  id: 'share-sample',
+  token: 'preview-token',
+  outputId: 'result',
+  assetId: 'person',
+  url: media.person,
+  mimeType: 'image/jpeg',
+  expiresAt: '2026-10-21T02:24:00.000Z',
+  developmentPreview: true,
+};
 const page = (items) => ({ items: mode === 'empty' ? [] : items, nextCursor: null });
 export async function request(path, options = {}) {
   await new Promise((resolve) => setTimeout(resolve, 80));
@@ -62,6 +72,7 @@ export async function request(path, options = {}) {
     return page([{ id: 'profile', name: '我的人物档案', activeVersion: 3, versions: [version] }]);
   if (route.includes('quota')) return { available: 3, reserved: 0, consumed: 1, costPerGeneration: 1 };
   if (route === '/generation-jobs') return page([job]);
+  if (route === '/generation-shares/resolve') return generationShare;
   if (route.startsWith('/generation-jobs/')) return job;
   if (route.endsWith('/state')) return { liked: false, bookmarked: false };
   if (route.endsWith('/follow-state')) return { following: false };

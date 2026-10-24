@@ -9,6 +9,7 @@ export default defineAppConfig({
     'pages/post/index',
     'pages/posts/index',
     'pages/generations/index',
+    'pages/generation-share/index',
     'pages/messages/index',
     'pages/follows/index',
     'pages/privacy/index',

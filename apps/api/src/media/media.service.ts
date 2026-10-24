@@ -275,6 +275,11 @@ export class MediaService {
     return this.readLocation(asset);
   }
 
+  /** Shares are backed by a short-lived database token; this method never exposes object keys. */
+  async readForShare(asset: MediaAssetEntity): Promise<string | null> {
+    return this.readLocation(asset);
+  }
+
   private async toContract(asset: MediaAssetEntity) {
     const url = await this.readLocation(asset);
     return {

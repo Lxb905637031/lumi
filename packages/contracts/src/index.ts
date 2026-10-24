@@ -370,6 +370,17 @@ export type GenerationOutput = {
   createdAt: string;
 };
 
+export type GenerationShare = {
+  id: string;
+  token: string;
+  outputId: string;
+  assetId: string;
+  url: string;
+  mimeType: string;
+  expiresAt: string;
+  developmentPreview: boolean;
+};
+
 export type CreateGenerationInput = {
   profileVersionId: string;
   clothingAssetId: string;

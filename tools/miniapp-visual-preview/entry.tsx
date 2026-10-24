@@ -9,6 +9,7 @@ import Publish from '../../apps/miniapp/src/pages/publish/index';
 import Post from '../../apps/miniapp/src/pages/post/index';
 import Posts from '../../apps/miniapp/src/pages/posts/index';
 import Generations from '../../apps/miniapp/src/pages/generations/index';
+import GenerationShare from '../../apps/miniapp/src/pages/generation-share/index';
 import Messages from '../../apps/miniapp/src/pages/messages/index';
 import Follows from '../../apps/miniapp/src/pages/follows/index';
 import Privacy from '../../apps/miniapp/src/pages/privacy/index';
@@ -25,6 +26,7 @@ const routes = {
   post: Post,
   posts: Posts,
   generations: Generations,
+  'generation-share': GenerationShare,
   messages: Messages,
   follows: Follows,
   privacy: Privacy,

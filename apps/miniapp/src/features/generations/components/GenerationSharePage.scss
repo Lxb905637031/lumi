@@ -1,0 +1,27 @@
+.generation-share-page {
+  min-height: 100vh;
+}
+
+.generation-share-image-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 560px;
+  padding: 26px;
+  border: 1px solid var(--lumi-color-line);
+  border-radius: var(--lumi-radius-control);
+  background: var(--lumi-color-surface);
+}
+
+.generation-share-image {
+  width: 100%;
+  max-height: 720px;
+}
+
+.generation-share-caption {
+  display: block;
+  margin-top: 18px;
+  color: var(--lumi-color-muted);
+  font-size: 22px;
+  text-align: center;
+}

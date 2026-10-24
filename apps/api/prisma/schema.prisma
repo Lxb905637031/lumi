@@ -473,11 +473,26 @@ model GenerationOutput {
   createdAt  DateTime      @default(now()) @map("created_at")
   job        GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
   asset      MediaAsset    @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  shares     GenerationShare[]
 
   @@unique([jobId, assetId])
   @@index([jobId, createdAt])
   @@index([assetId, deletedAt])
   @@map("generation_outputs")
+}
+
+model GenerationShare {
+  id        String          @id @default(cuid())
+  outputId  String          @map("output_id")
+  tokenHash String          @unique @map("token_hash")
+  expiresAt DateTime        @map("expires_at")
+  revokedAt DateTime?       @map("revoked_at")
+  createdAt DateTime        @default(now()) @map("created_at")
+  output    GenerationOutput @relation(fields: [outputId], references: [id], onDelete: Cascade)
+
+  @@index([outputId, revokedAt])
+  @@index([expiresAt, revokedAt])
+  @@map("generation_shares")
 }
 
 model Post {

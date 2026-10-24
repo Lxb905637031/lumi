@@ -89,6 +89,14 @@ try {
   const selected = await request(path + '/selection', 200, owner.token, 'PUT');
   const selectedAgain = await request(path + '/selection', 200, owner.token, 'PUT');
   assert.equal(selected.outputs[0].selectedAt, selectedAgain.outputs[0].selectedAt);
+  const share = await request(path + '/shares', 201, owner.token, 'POST', {});
+  assert.ok(share.token && share.token.length >= 32);
+  const publicShare = await request('/generation-shares/resolve', 200, null, 'POST', { token: share.token });
+  assert.equal(publicShare.outputId, output.id);
+  assert.equal(publicShare.developmentPreview, true);
+  await request('/generation-shares/resolve', 404, null, 'POST', { token: 'x'.repeat(40) });
+  await request('/generation-shares/' + share.id, 200, owner.token, 'DELETE');
+  await request('/generation-shares/resolve', 404, null, 'POST', { token: share.token });
   const saved = await request(path + '/saved', 200, owner.token, 'PUT');
   const savedAgain = await request(path + '/saved', 200, owner.token, 'PUT');
   assert.ok(saved.outputs[0].savedAt);
