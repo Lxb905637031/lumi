@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { QuotaService } from '../quota/quota.service';
 import { GENERATION_QUEUE, type GenerationQueue } from './generation-queue.port';
 import { GENERATION_LEASE_MS } from './generation.processor';
+import { queueEvent } from '../common/queue-logging';
 
 export const GENERATION_DISPATCH_DEADLINE_MS = 300_000;
 
@@ -125,9 +126,17 @@ export class GenerationRecoveryService implements OnModuleInit, OnModuleDestroy 
           profileVersionId: job.profileVersionId,
           clothingAssetId: job.clothingAssetId,
           quotaAttempt: job.quotaAttempt,
+          workflowId: job.id,
         });
       } catch {
-        this.logger.warn(`Generation ${job.id} redispatch deferred`);
+        this.logger.warn(
+          queueEvent({
+            event: 'queue.recovery.redispatch-deferred',
+            queue: 'generation',
+            workflowId: job.id,
+            outcome: 'deferred',
+          }),
+        );
       }
     }
   }

@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { QuotaService } from '../quota/quota.service';
 import { GENERATION_QUEUE_NAME, type EnqueueGenerationCommand } from './generation-queue.port';
 import { GENERATION_PROVIDER, type GeneratedAsset, type GenerationProvider } from './generation-provider.port';
+import { queueEvent, safeErrorCode } from '../common/queue-logging';
 
 // Only the development provider is wired. Real providers need timeout/cancellation acceptance.
 export const GENERATION_LEASE_MS = 120_000;
@@ -27,6 +28,19 @@ export class GenerationProcessor extends WorkerHost {
   }
 
   async process(delivery: Job<EnqueueGenerationCommand>): Promise<void> {
+    const workflowId = delivery.data.workflowId ?? delivery.data.jobId;
+    const requestId = delivery.data.requestId;
+    const attempt = delivery.attemptsMade + 1;
+    this.logger.log(
+      queueEvent({
+        event: 'queue.process.started',
+        queue: GENERATION_QUEUE_NAME,
+        bullJobId: String(delivery.id),
+        requestId,
+        workflowId,
+        attempt,
+      }),
+    );
     const token = randomUUID();
     const maxAttempts = this.config.getOrThrow<number>('GENERATION_QUEUE_ATTEMPTS');
     const job = await this.prisma.$transaction(async (tx) => {
@@ -51,7 +65,20 @@ export class GenerationProcessor extends WorkerHost {
       });
       return claimed.count === 1 ? tx.generationJob.findUniqueOrThrow({ where: { id: delivery.data.jobId } }) : null;
     });
-    if (!job) return;
+    if (!job) {
+      this.logger.log(
+        queueEvent({
+          event: 'queue.process.skipped',
+          queue: GENERATION_QUEUE_NAME,
+          bullJobId: String(delivery.id),
+          requestId,
+          workflowId,
+          attempt,
+          outcome: 'stale-or-duplicate',
+        }),
+      );
+      return;
+    }
 
     const running = {
       id: job.id,
@@ -129,9 +156,20 @@ export class GenerationProcessor extends WorkerHost {
           },
         });
       });
+      this.logger.log(
+        queueEvent({
+          event: 'queue.process.completed',
+          queue: GENERATION_QUEUE_NAME,
+          bullJobId: String(delivery.id),
+          requestId,
+          workflowId,
+          attempt: job.retryCount,
+          outcome: 'succeeded',
+        }),
+      );
     } catch (error) {
       const finalAttempt = job.retryCount >= maxAttempts;
-      const errorCode = error instanceof Error ? error.name.slice(0, 80) : 'GENERATION_PROVIDER_ERROR';
+      const errorCode = safeErrorCode(error);
       await this.prisma.$transaction(async (tx) => {
         const failed = await tx.generationJob.updateMany({
           where: { ...running, leaseExpiresAt: { gt: new Date() } },
@@ -159,7 +197,18 @@ export class GenerationProcessor extends WorkerHost {
           });
         }
       });
-      this.logger.error(`Generation ${job.id} attempt ${job.retryCount} failed (${errorCode})`);
+      this.logger.error(
+        queueEvent({
+          event: 'queue.process.failed',
+          queue: GENERATION_QUEUE_NAME,
+          bullJobId: String(delivery.id),
+          requestId,
+          workflowId,
+          attempt: job.retryCount,
+          outcome: finalAttempt ? 'dead-letter' : 'retrying',
+          errorCode,
+        }),
+      );
       throw error;
     }
   }

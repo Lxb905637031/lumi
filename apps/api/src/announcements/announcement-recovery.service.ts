@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ANNOUNCEMENT_QUEUE, type AnnouncementQueue } from './announcement-queue.port';
+import { queueEvent } from '../common/queue-logging';
 
 @Injectable()
 export class AnnouncementRecoveryService implements OnModuleInit, OnModuleDestroy {
@@ -42,9 +43,16 @@ export class AnnouncementRecoveryService implements OnModuleInit, OnModuleDestro
     });
     for (const announcement of pending) {
       try {
-        await this.queue.enqueue({ announcementId: announcement.id });
+        await this.queue.enqueue({ announcementId: announcement.id, workflowId: announcement.id });
       } catch {
-        this.logger.warn(`Announcement ${announcement.id} redispatch deferred`);
+        this.logger.warn(
+          queueEvent({
+            event: 'queue.recovery.redispatch-deferred',
+            queue: 'announcement-delivery',
+            workflowId: announcement.id,
+            outcome: 'deferred',
+          }),
+        );
       }
     }
   }

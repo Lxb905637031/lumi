@@ -9,6 +9,9 @@ export type EnqueueGenerationCommand = {
   clothingAssetId: string;
   /** Absent only on queue records written before quota migrations. */
   quotaAttempt?: number;
+  /** Optional for compatibility with queue records created before correlation was added. */
+  requestId?: string;
+  workflowId?: string;
 };
 
 export interface GenerationQueue {

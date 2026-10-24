@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
 import { UserRole } from '@prisma/client';
 import { AuthGuard } from '../common/auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
@@ -12,6 +13,7 @@ import {
   UpdateAnnouncementDto,
 } from './announcements.dto';
 import { AnnouncementsService } from './announcements.service';
+import { ensureRequestId } from '../common/api-response';
 
 @Controller('admin/announcements')
 @UseGuards(AuthGuard, RolesGuard)
@@ -40,7 +42,7 @@ export class AnnouncementsController {
   }
 
   @Post(':id/publish')
-  publish(@Param('id') id: string, @Body() dto: PublishAnnouncementDto) {
-    return this.announcements.publish(id, dto);
+  publish(@Param('id') id: string, @Body() dto: PublishAnnouncementDto, @Req() request: FastifyRequest) {
+    return this.announcements.publish(id, dto, ensureRequestId(request));
   }
 }

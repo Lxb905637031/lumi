@@ -40,7 +40,13 @@ export class ApiExceptionFilter implements ExceptionFilter {
       'code' in body && typeof body.code === 'string' ? body.code : (statusCodes[status] ?? 'INTERNAL_SERVER_ERROR');
     const id = requestId(request, reply);
     if (status >= 500) {
-      this.logger.error(`requestId=${id} ${exception instanceof Error ? exception.stack : String(exception)}`);
+      const errorName =
+        exception instanceof Error && /^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(exception.name)
+          ? exception.name
+          : 'UNKNOWN_ERROR';
+      this.logger.error(
+        JSON.stringify({ event: 'http.request.failed', requestId: id, statusCode: status, code, errorName }),
+      );
     }
     const failure: ApiFailure = {
       success: false,

@@ -93,7 +93,7 @@ export class AnnouncementsService {
     return this.get(id);
   }
 
-  async publish(id: string, input: PublishAnnouncementDto): Promise<Announcement> {
+  async publish(id: string, input: PublishAnnouncementDto, requestId?: string): Promise<Announcement> {
     let shouldDispatch = false;
     await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM announcements WHERE id = ${id} FOR UPDATE`;
@@ -123,7 +123,7 @@ export class AnnouncementsService {
         throw new ConflictException('公告已发布');
       }
     });
-    if (shouldDispatch) await this.queue.enqueue({ announcementId: id });
+    if (shouldDispatch) await this.queue.enqueue({ announcementId: id, requestId, workflowId: id });
     return this.get(id);
   }
 

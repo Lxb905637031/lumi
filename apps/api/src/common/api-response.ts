@@ -24,10 +24,19 @@ export type ApiFailure = {
   meta: ApiMeta;
 };
 
-export function requestId(request: FastifyRequest, reply: FastifyReply): string {
+export type RequestWithCorrelation = FastifyRequest & { lumiRequestId?: string };
+
+export function ensureRequestId(request: FastifyRequest): string {
+  const correlated = request as RequestWithCorrelation;
+  if (correlated.lumiRequestId) return correlated.lumiRequestId;
   const header = request.headers['x-request-id'];
   const candidate = Array.isArray(header) ? header[0] : header;
-  const id = candidate && REQUEST_ID_PATTERN.test(candidate) ? candidate : randomUUID();
+  correlated.lumiRequestId = candidate && REQUEST_ID_PATTERN.test(candidate) ? candidate : randomUUID();
+  return correlated.lumiRequestId;
+}
+
+export function requestId(request: FastifyRequest, reply: FastifyReply): string {
+  const id = ensureRequestId(request);
   reply.header('x-request-id', id);
   return id;
 }

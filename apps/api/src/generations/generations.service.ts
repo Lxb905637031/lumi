@@ -53,6 +53,7 @@ export class GenerationsService {
       clothingAssetId: string;
       idempotencyKey: string;
     },
+    requestId?: string,
   ): Promise<GenerationJob> {
     if (this.config.getOrThrow<string>('FREE_MODE') !== 'true') {
       throw new ServiceUnavailableException('真实试穿生成服务尚未配置');
@@ -129,7 +130,7 @@ export class GenerationsService {
       await this.quota.reserve(tx, created);
       return created;
     });
-    if (job.status === GenerationJobStatus.QUEUED) await this.ensureEnqueued(job);
+    if (job.status === GenerationJobStatus.QUEUED) await this.ensureEnqueued(job, requestId);
     return this.findOwned(userId, job.id);
   }
 
@@ -166,7 +167,7 @@ export class GenerationsService {
     };
   }
 
-  async retry(userId: string, id: string): Promise<GenerationJob> {
+  async retry(userId: string, id: string, requestId?: string): Promise<GenerationJob> {
     if (this.config.getOrThrow<string>('FREE_MODE') !== 'true')
       throw new ServiceUnavailableException('真实试穿生成服务尚未配置');
     const current = await this.prisma.$transaction(async (tx) => {
@@ -201,7 +202,7 @@ export class GenerationsService {
       await this.quota.reserve(tx, retried);
       return retried;
     });
-    if (current.status === GenerationJobStatus.QUEUED) await this.ensureEnqueued(current);
+    if (current.status === GenerationJobStatus.QUEUED) await this.ensureEnqueued(current, requestId);
     return this.findOwned(userId, id);
   }
 
@@ -238,13 +239,16 @@ export class GenerationsService {
     return this.findOwned(userId, id);
   }
 
-  private async ensureEnqueued(job: {
-    id: string;
-    userId: string;
-    profileVersionId: string;
-    clothingAssetId: string;
-    quotaAttempt: number;
-  }): Promise<void> {
+  private async ensureEnqueued(
+    job: {
+      id: string;
+      userId: string;
+      profileVersionId: string;
+      clothingAssetId: string;
+      quotaAttempt: number;
+    },
+    requestId?: string,
+  ): Promise<void> {
     try {
       await this.generationQueue.enqueue({
         jobId: job.id,
@@ -252,6 +256,8 @@ export class GenerationsService {
         profileVersionId: job.profileVersionId,
         clothingAssetId: job.clothingAssetId,
         quotaAttempt: job.quotaAttempt,
+        requestId,
+        workflowId: job.id,
       });
     } catch {
       const failed = await this.prisma.$transaction(async (tx) => {
