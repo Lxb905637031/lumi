@@ -25,15 +25,17 @@ function responseError(response: RefreshResponse, requestId?: string): ApiReques
 }
 
 export function createSessionRefreshCoordinator(options: SessionRefreshOptions) {
-  let refreshInFlight: Promise<string> | undefined;
+  let refreshInFlight: { epoch: number; refreshToken: string; promise: Promise<string> } | undefined;
 
   return function refreshAccessToken(): Promise<string> {
-    if (refreshInFlight) return refreshInFlight;
     const refreshToken = options.getRefreshToken();
     const sessionEpoch = options.getSessionEpoch();
     if (!refreshToken) return Promise.reject(new Error('登录状态已失效，请重新登录'));
+    if (refreshInFlight && refreshInFlight.epoch === sessionEpoch && refreshInFlight.refreshToken === refreshToken) {
+      return refreshInFlight.promise;
+    }
 
-    refreshInFlight = options
+    const promise = options
       .refresh(refreshToken)
       .then((response) => {
         const body = response.data as ApiSuccess<AuthSession> | ApiError;
@@ -56,8 +58,9 @@ export function createSessionRefreshCoordinator(options: SessionRefreshOptions) 
         return body.data.accessToken;
       })
       .finally(() => {
-        refreshInFlight = undefined;
+        if (refreshInFlight?.promise === promise) refreshInFlight = undefined;
       });
-    return refreshInFlight;
+    refreshInFlight = { epoch: sessionEpoch, refreshToken, promise };
+    return promise;
   };
 }

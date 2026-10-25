@@ -12,7 +12,7 @@
 ## 验收
 
 - `pnpm --filter @lumi/miniapp typecheck`
-- `pnpm --filter @lumi/miniapp test`：新增并发共享、退出迟到响应、切换账号迟到响应 3 项。
+- `pnpm --filter @lumi/miniapp test`：新增并发共享、退出迟到响应、切换账号迟到响应、新账号不等待旧刷新 4 项。
 - `pnpm check`：全 workspace 格式、Lint、类型、测试和三端构建。
 
 当前验收是纯逻辑测试和构建；Taro.request 运行时、断网/恢复行为以及微信开发者工具和 iOS/Android 真机仍未验证。
