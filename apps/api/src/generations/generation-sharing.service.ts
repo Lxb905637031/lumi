@@ -31,6 +31,9 @@ export class GenerationSharingService {
     });
     if (!output) throw new NotFoundException('请先确认一个可用的生成结果');
 
+    const url = await this.media.readForShare(output.asset);
+    if (!url) throw new ConflictException('图片暂不可用，请稍后重试');
+
     const token = randomBytes(32).toString('base64url');
     const share = await this.prisma.generationShare.create({
       data: {
@@ -39,11 +42,11 @@ export class GenerationSharingService {
         expiresAt: new Date(Date.now() + SHARE_TTL_MS),
       },
     });
-    return this.toContract(share.id, token, share.expiresAt, output);
+    return this.toContract(share.id, token, share.expiresAt, output, url);
   }
 
   async read(token: string): Promise<GenerationShare> {
-    if (!token || token.length > 128) throw new NotFoundException('分享链接不存在或已失效');
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) throw new NotFoundException('分享链接不存在或已失效');
     const share = await this.prisma.generationShare.findUnique({
       where: { tokenHash: hashToken(token) },
       include: {
@@ -67,7 +70,9 @@ export class GenerationSharingService {
     ) {
       throw new NotFoundException('分享链接不存在或已失效');
     }
-    return this.toContract(share.id, token, share.expiresAt, share.output);
+    const url = await this.media.readForShare(share.output.asset);
+    if (!url) throw new ConflictException('图片暂不可用，请稍后重试');
+    return this.toContract(share.id, token, share.expiresAt, share.output, url);
   }
 
   async revoke(userId: string, shareId: string) {
@@ -79,7 +84,7 @@ export class GenerationSharingService {
     return { revoked: true };
   }
 
-  private async toContract(
+  private toContract(
     id: string,
     token: string,
     expiresAt: Date,
@@ -92,9 +97,8 @@ export class GenerationSharingService {
       asset: Parameters<MediaService['readForShare']>[0];
       job: { provider: string; status?: string };
     },
-  ): Promise<GenerationShare> {
-    const url = await this.media.readForShare(output.asset);
-    if (!url) throw new ConflictException('图片暂不可用，请稍后重试');
+    url: string,
+  ): GenerationShare {
     return {
       id,
       token,

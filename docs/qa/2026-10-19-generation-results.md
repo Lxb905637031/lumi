@@ -17,6 +17,7 @@
 - 新增 `POST /generation-jobs/:id/outputs/:outputId/shares`、`POST /generation-shares/resolve` 和所有者撤销接口；分享 token 只存 SHA-256 摘要，默认 24 小时过期，解析 token 放在请求体中而非 API URL。
 - 小程序新增分享落地页、`onShareAppMessage`、合法远程图片下载到相册、相册权限拒绝后 `openSetting` 恢复，以及 local-svg 开发预览的明确限制提示。
 - 本轮静态验证：API/小程序 TypeScript、Nest build、Taro weapp build 已通过；真实分享 HTTP 尚未执行，原因是本机 PostgreSQL `127.0.0.1:55432`、Redis `127.0.0.1:56379` 与 Docker daemon 均不可用。不得把静态构建视为接口联调证据。
+- 新增分享服务单元测试：签名图片地址不可用时不写入孤立分享记录；原始 token 只在创建响应返回，数据库仅保存 SHA-256 摘要；格式错误、过期、撤销和图片读取失败均拒绝解析。真实分享 HTTP 仍需基础设施恢复后执行。
 
 新命令已接入 CI，需每次推送后独立确认远端结果。测试只创建唯一 runId 本轮 fixture，并在 finally 删除自己的记录；S3 文件保留持久清理任务，不重置数据库。
 
