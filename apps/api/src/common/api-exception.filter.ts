@@ -1,6 +1,7 @@
 import { ArgumentsHost, Catch, HttpException, HttpStatus, Logger, type ExceptionFilter } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { meta, requestId, type ApiFailure } from './api-response';
+import { RuntimeMetricsService } from './runtime-metrics.service';
 
 const statusCodes: Record<number, string> = {
   [HttpStatus.BAD_REQUEST]: 'VALIDATION_ERROR',
@@ -15,6 +16,8 @@ const statusCodes: Record<number, string> = {
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(ApiExceptionFilter.name);
+
+  constructor(private readonly metrics: RuntimeMetricsService) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const http = host.switchToHttp();
@@ -39,6 +42,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const code =
       'code' in body && typeof body.code === 'string' ? body.code : (statusCodes[status] ?? 'INTERNAL_SERVER_ERROR');
     const id = requestId(request, reply);
+    const startedAt = (request as FastifyRequest & { lumiStartedAt?: bigint }).lumiStartedAt;
+    this.metrics.recordHttp(status, startedAt ? Number(process.hrtime.bigint() - startedAt) / 1_000_000 : 0);
     if (status >= 500) {
       const errorName =
         exception instanceof Error && /^[A-Za-z][A-Za-z0-9_]{0,79}$/.test(exception.name)

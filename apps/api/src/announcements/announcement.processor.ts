@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -8,13 +8,17 @@ import {
   type EnqueueAnnouncementCommand,
 } from './announcement-queue.port';
 import { queueEvent, safeErrorCode } from '../common/queue-logging';
+import { RuntimeMetricsService } from '../common/runtime-metrics.service';
 
 @Injectable()
 @Processor(ANNOUNCEMENT_QUEUE_NAME)
 export class AnnouncementProcessor extends WorkerHost {
   private readonly logger = new Logger(AnnouncementProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(RuntimeMetricsService) private readonly metrics: RuntimeMetricsService,
+  ) {
     super();
   }
 
@@ -22,6 +26,7 @@ export class AnnouncementProcessor extends WorkerHost {
     const workflowId = delivery.data.workflowId ?? delivery.data.announcementId;
     const requestId = delivery.data.requestId;
     const attempt = delivery.attemptsMade + 1;
+    this.metrics.recordQueue(ANNOUNCEMENT_QUEUE_NAME, 'started');
     this.logger.log(
       queueEvent({
         event: 'queue.process.started',
@@ -35,6 +40,7 @@ export class AnnouncementProcessor extends WorkerHost {
     try {
       const announcement = await this.prisma.announcement.findUnique({ where: { id: delivery.data.announcementId } });
       if (!announcement || announcement.status === 'SENT' || announcement.status === 'DRAFT') {
+        this.metrics.recordQueue(ANNOUNCEMENT_QUEUE_NAME, 'skipped');
         this.logger.log(
           queueEvent({
             event: 'queue.process.skipped',
@@ -93,6 +99,7 @@ export class AnnouncementProcessor extends WorkerHost {
           outcome: 'succeeded',
         }),
       );
+      this.metrics.recordQueue(ANNOUNCEMENT_QUEUE_NAME, 'succeeded');
     } catch (error) {
       this.logger.error(
         queueEvent({
@@ -106,6 +113,7 @@ export class AnnouncementProcessor extends WorkerHost {
           errorCode: safeErrorCode(error),
         }),
       );
+      this.metrics.recordQueue(ANNOUNCEMENT_QUEUE_NAME, 'retrying');
       throw error;
     }
   }

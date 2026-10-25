@@ -8,6 +8,7 @@ import { QuotaService } from '../quota/quota.service';
 import { GENERATION_QUEUE_NAME, type EnqueueGenerationCommand } from './generation-queue.port';
 import { GENERATION_PROVIDER, type GeneratedAsset, type GenerationProvider } from './generation-provider.port';
 import { queueEvent, safeErrorCode } from '../common/queue-logging';
+import { RuntimeMetricsService } from '../common/runtime-metrics.service';
 
 // Only the development provider is wired. Real providers need timeout/cancellation acceptance.
 export const GENERATION_LEASE_MS = 120_000;
@@ -23,6 +24,7 @@ export class GenerationProcessor extends WorkerHost {
     @Inject(GENERATION_PROVIDER) private readonly provider: GenerationProvider,
     @Inject(ConfigService) private readonly config: ConfigService,
     @Inject(QuotaService) private readonly quota: QuotaService,
+    @Inject(RuntimeMetricsService) private readonly metrics: RuntimeMetricsService,
   ) {
     super();
   }
@@ -31,6 +33,7 @@ export class GenerationProcessor extends WorkerHost {
     const workflowId = delivery.data.workflowId ?? delivery.data.jobId;
     const requestId = delivery.data.requestId;
     const attempt = delivery.attemptsMade + 1;
+    this.metrics.recordQueue(GENERATION_QUEUE_NAME, 'started');
     this.logger.log(
       queueEvent({
         event: 'queue.process.started',
@@ -66,6 +69,7 @@ export class GenerationProcessor extends WorkerHost {
       return claimed.count === 1 ? tx.generationJob.findUniqueOrThrow({ where: { id: delivery.data.jobId } }) : null;
     });
     if (!job) {
+      this.metrics.recordQueue(GENERATION_QUEUE_NAME, 'skipped');
       this.logger.log(
         queueEvent({
           event: 'queue.process.skipped',
@@ -167,6 +171,7 @@ export class GenerationProcessor extends WorkerHost {
           outcome: 'succeeded',
         }),
       );
+      this.metrics.recordQueue(GENERATION_QUEUE_NAME, 'succeeded');
     } catch (error) {
       const finalAttempt = job.retryCount >= maxAttempts;
       const errorCode = safeErrorCode(error);
@@ -209,6 +214,7 @@ export class GenerationProcessor extends WorkerHost {
           errorCode,
         }),
       );
+      this.metrics.recordQueue(GENERATION_QUEUE_NAME, finalAttempt ? 'dead-letter' : 'retrying');
       throw error;
     }
   }

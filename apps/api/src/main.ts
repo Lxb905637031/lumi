@@ -7,6 +7,7 @@ import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './common/api-exception.filter';
 import { ApiResponseInterceptor } from './common/api-response.interceptor';
+import { RuntimeMetricsService } from './common/runtime-metrics.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -32,8 +33,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  app.useGlobalFilters(new ApiExceptionFilter());
-  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  const metrics = app.get(RuntimeMetricsService);
+  app.useGlobalFilters(new ApiExceptionFilter(metrics));
+  app.useGlobalInterceptors(new ApiResponseInterceptor(metrics));
   app.enableShutdownHooks();
   await app.listen(config.getOrThrow<number>('PORT'), '0.0.0.0');
 }

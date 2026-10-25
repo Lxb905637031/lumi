@@ -14,6 +14,7 @@ import {
 import type { EnqueueGenerationCommand } from '../src/generations/generation-queue.port';
 import { LocalGenerationProvider } from '../src/generations/local-generation-provider';
 import { QuotaService } from '../src/quota/quota.service';
+import { RuntimeMetricsService } from '../src/common/runtime-metrics.service';
 
 test('local generation provider returns a deterministic private preview asset', async () => {
   const provider = new LocalGenerationProvider();
@@ -72,6 +73,7 @@ test('generation processor moves a permanently failing job to dead letter', asyn
           },
         },
       },
+      RuntimeMetricsService,
     ],
   }).compile();
   const processor = moduleRef.get(GenerationProcessor);

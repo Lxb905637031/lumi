@@ -21,6 +21,7 @@ import { AccountPrivacyModule } from './account-privacy/account-privacy.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { UserModerationModule } from './user-moderation/user-moderation.module';
 import { ChallengesModule } from './challenges/challenges.module';
+import { RuntimeMetricsModule } from './common/runtime-metrics.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ChallengesModule } from './challenges/challenges.module';
       }),
     }),
     PrismaModule,
+    RuntimeMetricsModule,
     HealthModule,
     SystemModule,
     AuthModule,

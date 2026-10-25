@@ -1,8 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
 import type { HealthResponse } from '@lumi/contracts';
+import { RuntimeMetricsService } from '../common/runtime-metrics.service';
 
 @Controller('health')
 export class HealthController {
+  constructor(private readonly metrics: RuntimeMetricsService) {}
+
   @Get()
   getHealth(): HealthResponse {
     return {
@@ -25,6 +28,7 @@ export class HealthController {
       },
       node: process.version,
       timestamp: new Date().toISOString(),
+      runtime: this.metrics.snapshot(),
     };
   }
 }
