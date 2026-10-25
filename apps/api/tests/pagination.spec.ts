@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { BadRequestException } from '@nestjs/common';
 import { decodeTimestampCursor, encodeTimestampCursor } from '../src/common/pagination/pagination';
-import { validateEnvironment } from '../src/config/env';
+import { parseCorsOrigins, validateEnvironment } from '../src/config/env';
 
 test('timestamp cursors round-trip with stable identifiers', () => {
   const cursor = { timestamp: '2026-10-18T10:00:00.000Z', id: 'profile-42' };
@@ -22,6 +22,21 @@ test('malformed timestamp cursors are rejected as client errors', () => {
 
 test('missing cursors represent the first page', () => {
   assert.equal(decodeTimestampCursor(undefined), undefined);
+});
+
+test('CORS origins require explicit HTTP(S) origins without paths or wildcards', () => {
+  assert.deepEqual(parseCorsOrigins(' https://lumi.example.com, http://localhost:3000/ '), [
+    'https://lumi.example.com',
+    'http://localhost:3000',
+  ]);
+  for (const value of [
+    '*',
+    'https://lumi.example.com/path',
+    'https://user:secret@lumi.example.com',
+    'ftp://lumi.example.com',
+  ]) {
+    assert.throws(() => parseCorsOrigins(value), /CORS_ORIGINS/);
+  }
 });
 
 test('production configuration rejects FREE_MODE', () => {

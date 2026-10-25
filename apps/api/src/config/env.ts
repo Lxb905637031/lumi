@@ -157,6 +157,7 @@ export function validateEnvironment(config: Record<string, unknown>) {
   if (environment.NODE_ENV === 'production' && !environment.CORS_ORIGINS.trim()) {
     throw new Error('CORS_ORIGINS must be configured in production');
   }
+  parseCorsOrigins(environment.CORS_ORIGINS);
   if (environment.NODE_ENV === 'production' && environment.LOCAL_ADMIN_OPEN_IDS.trim()) {
     throw new Error('LOCAL_ADMIN_OPEN_IDS is only allowed outside production');
   }
@@ -212,4 +213,31 @@ export function validateEnvironment(config: Record<string, unknown>) {
     }
   }
   return environment;
+}
+
+export function parseCorsOrigins(value: string): string[] {
+  return value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map((origin) => {
+      let parsed: URL;
+      try {
+        parsed = new URL(origin);
+      } catch {
+        throw new Error('CORS_ORIGINS must contain valid HTTP(S) origins');
+      }
+      if (
+        origin === '*' ||
+        !['http:', 'https:'].includes(parsed.protocol) ||
+        parsed.username ||
+        parsed.password ||
+        parsed.pathname !== '/' ||
+        parsed.search ||
+        parsed.hash
+      ) {
+        throw new Error('CORS_ORIGINS must contain HTTP(S) origins without credentials, path or wildcard');
+      }
+      return parsed.origin;
+    });
 }

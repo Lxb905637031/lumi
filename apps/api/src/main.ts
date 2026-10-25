@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import helmet from '@fastify/helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -8,6 +9,7 @@ import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './common/api-exception.filter';
 import { ApiResponseInterceptor } from './common/api-response.interceptor';
 import { RuntimeMetricsService } from './common/runtime-metrics.service';
+import { parseCorsOrigins } from './config/env';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -15,16 +17,19 @@ async function bootstrap() {
     new FastifyAdapter({ logger: true, bodyLimit: 7_100_000 }),
   );
   const config = app.get(ConfigService);
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'same-site' },
+    hsts: config.get<string>('NODE_ENV') === 'production' ? { maxAge: 31_536_000, includeSubDomains: true } : false,
+  });
   app.setGlobalPrefix('api/v1');
-  const allowedOrigins = config
-    .getOrThrow<string>('CORS_ORIGINS')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const allowedOrigins = parseCorsOrigins(config.getOrThrow<string>('CORS_ORIGINS'));
   app.enableCors({
     origin: allowedOrigins,
+    credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Request-Id'],
+    exposedHeaders: ['x-request-id'],
   });
   app.useGlobalPipes(
     new ValidationPipe({
