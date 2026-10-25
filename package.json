@@ -25,6 +25,7 @@
     "db:adopt-baseline": "pnpm --filter @lumi/api db:adopt-baseline",
     "test:migrations": "pnpm --filter @lumi/api test:migrations",
     "backup:local": "node --env-file-if-exists=.env scripts/backup-local.mjs",
+    "backup:verify": "node --env-file-if-exists=.env scripts/verify-backup-local.mjs",
     "restore:local": "node --env-file-if-exists=.env scripts/restore-local.mjs",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down"

@@ -19,4 +19,4 @@
 
 ## 本地演练
 
-`node scripts/backup-local.mjs output/backups/check.dump` 可创建本地 PostgreSQL custom dump；恢复前必须显式设置 `LUMI_ALLOW_DESTRUCTIVE_RESTORE=YES` 并传入明确文件路径。脚本拒绝生产环境，但不能替代生产备份服务、异地副本或恢复演练。
+`node scripts/backup-local.mjs output/backups/check.dump` 可创建本地 PostgreSQL custom dump，并在命令成功前执行 `pg_restore --list` 可读性校验，输出文件大小和 SHA-256。已有文件可用 `pnpm backup:verify -- output/backups/check.dump` 独立复核。恢复前必须显式设置 `LUMI_ALLOW_DESTRUCTIVE_RESTORE=YES` 并传入明确文件路径。脚本拒绝生产环境，但不能替代生产备份服务、异地副本或恢复演练。

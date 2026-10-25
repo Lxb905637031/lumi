@@ -53,10 +53,24 @@ try {
 }
 const file = await stat(target);
 if (file.size < 128) throw new Error('backup file is unexpectedly small');
-console.log(
-  JSON.stringify({
-    target,
-    bytes: file.size,
-    mode: 'local-only; verify and copy to protected storage before production use',
-  }),
-);
+
+const verification = spawn(process.execPath, [new URL('./verify-backup-local.mjs', import.meta.url), target], {
+  stdio: ['ignore', 'pipe', 'inherit'],
+});
+let verificationOutput = '';
+verification.stdout.setEncoding('utf8');
+verification.stdout.on('data', (chunk) => {
+  verificationOutput += chunk;
+});
+try {
+  await new Promise((resolvePromise, reject) => {
+    verification.once('error', reject);
+    verification.once('exit', (code) =>
+      code === 0 ? resolvePromise() : reject(new Error(`backup verification exited with ${code}`)),
+    );
+  });
+} catch (error) {
+  await rm(target, { force: true });
+  throw error;
+}
+console.log(verificationOutput.trim());
