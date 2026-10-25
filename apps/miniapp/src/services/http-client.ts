@@ -1,6 +1,7 @@
 import Taro from '@tarojs/taro';
 import type { ApiError, ApiSuccess, AuthSession } from '@lumi/contracts';
 import { ApiRequestError } from './api-request-error';
+import { createSessionRefreshCoordinator } from './session-refresh';
 
 const API_BASE_URL = process.env.TARO_APP_API_BASE_URL ?? 'http://127.0.0.1:4300/api/v1';
 const ACCESS_TOKEN_KEY = 'lumi.accessToken';
@@ -64,27 +65,17 @@ function responseRequestId(header?: Record<string, string | undefined>): string 
   return entry?.[1];
 }
 
-let refreshInFlight: Promise<string> | undefined;
-
-async function refreshAccessToken(): Promise<string> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) throw new Error('登录状态已失效，请重新登录');
-  refreshInFlight ??= requestOnce<AuthSession>('/auth/refresh', { method: 'POST', data: { refreshToken } }, '')
-    .then((response) => {
-      const body = response.data as ApiSuccess<AuthSession> | ApiError;
-      if (response.statusCode >= 400 || !body.success) {
-        if ([400, 401, 403].includes(response.statusCode)) clearSession();
-        throw readError(body, response.statusCode, responseRequestId(response.header));
-      }
-      saveAccessToken(body.data.accessToken);
-      saveRefreshToken(body.data.refreshToken);
-      return body.data.accessToken;
-    })
-    .finally(() => {
-      refreshInFlight = undefined;
-    });
-  return refreshInFlight;
-}
+const refreshAccessToken = createSessionRefreshCoordinator({
+  getRefreshToken,
+  getSessionEpoch,
+  refresh: (refreshToken) => requestOnce<AuthSession>('/auth/refresh', { method: 'POST', data: { refreshToken } }, ''),
+  save: (session) => {
+    saveAccessToken(session.accessToken);
+    saveRefreshToken(session.refreshToken);
+  },
+  clear: clearSession,
+  requestId: responseRequestId,
+});
 
 export async function request<T>(path: string, options: Omit<Taro.request.Option, 'url'> = {}): Promise<T> {
   const initialToken = getAccessToken();
