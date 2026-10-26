@@ -1,31 +1,17 @@
 import { AdminShell } from '../../components/admin-shell/AdminShell';
-import { MetricCard, type Metric } from '../../components/metric-card/MetricCard';
 import { ReviewQueue } from '../../features/moderation/ReviewQueue';
 import { CommentReviewQueue } from '../../features/moderation/CommentReviewQueue';
 import { ReportReviewQueue } from '../../features/moderation/ReportReviewQueue';
-import { getAdminOverview, type AdminOverview } from '../../services/moderation-api';
 import { logoutAdmin } from '../../services/admin-session';
 import { AnnouncementComposer } from '../../features/announcements/AnnouncementComposer';
 import { UserModerationPanel } from '../../features/users/UserModerationPanel';
 import { MediaReviewQueue } from '../../features/moderation/MediaReviewQueue';
-import { useEffect, useState } from 'react';
 import { ChallengeOperations } from '../../features/challenges/ChallengeOperations';
 import { RuntimeConfigPanel } from '../../features/config/RuntimeConfigPanel';
 import { AuditLogPanel } from '../../features/audit/AuditLogPanel';
+import { OverviewMetrics } from '../../features/overview/OverviewMetrics';
 
 export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
-  const [overview, setOverview] = useState<AdminOverview>();
-  useEffect(() => {
-    void getAdminOverview()
-      .then(setOverview)
-      .catch(() => undefined);
-  }, []);
-  const metrics: Metric[] = [
-    { label: '待审核', value: overview?.pendingPosts ?? '—' },
-    { label: '今日生成', value: overview?.generationToday ?? '—' },
-    { label: '失败任务', value: overview?.failedGenerations ?? '—' },
-    { label: '社区帖子', value: overview?.communityPosts ?? '—' },
-  ];
   return (
     <AdminShell
       title="内容审核工作台"
@@ -34,11 +20,9 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
         onLoggedOut();
       }}
     >
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-4" aria-label="运营指标">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
-        ))}
-      </section>
+      <div className="mt-6 sm:mt-10">
+        <OverviewMetrics />
+      </div>
       <ReviewQueue />
       <CommentReviewQueue />
       <MediaReviewQueue />
