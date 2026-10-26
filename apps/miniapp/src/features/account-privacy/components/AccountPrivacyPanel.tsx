@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import type { AccountDeletionRequest, DataExportRequest } from '@lumi/contracts';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
+import { ModalSheet } from '../../../components/ui/ModalSheet/ModalSheet';
 import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceStatus';
 import { hasSession } from '../../../services/http-client';
 import {
@@ -38,6 +39,7 @@ export function AccountPrivacyPanel() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [exportNotice, setExportNotice] = useState<string>();
   const pollTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const load = async () => {
@@ -90,11 +92,7 @@ export function AccountPrivacyPanel() {
     setBusy(true);
     try {
       const result = await downloadDataExport(item.id);
-      await Taro.showModal({
-        title: '数据导出已准备',
-        content: `已包含 ${Object.keys(result.data).length} 类账号数据。请在有效期内联系 Lumi 支持获取文件。`,
-        showCancel: false,
-      });
+      setExportNotice(`已包含 ${Object.keys(result.data).length} 类账号数据。请在有效期内联系 Lumi 支持获取文件。`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '导出下载失败');
     } finally {
@@ -192,6 +190,9 @@ export function AccountPrivacyPanel() {
           </View>
         </>
       )}
+      <ModalSheet open={Boolean(exportNotice)} title="数据导出已准备" onClose={() => setExportNotice(undefined)}>
+        <Text className="privacy-export-notice">{exportNotice ?? ''}</Text>
+      </ModalSheet>
     </View>
   );
 }
