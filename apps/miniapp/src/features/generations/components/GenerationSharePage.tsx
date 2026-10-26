@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { GenerationShare } from '@lumi/contracts';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
+import { ModalSheet } from '../../../components/ui/ModalSheet/ModalSheet';
 import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceStatus';
 import { getGenerationShare } from '../generation-sharing.api';
 import './GenerationSharePage.scss';
@@ -13,6 +14,7 @@ export function GenerationSharePage({ token }: { token?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [previewNoticeOpen, setPreviewNoticeOpen] = useState(false);
 
   useShareAppMessage(() => ({
     title: 'Lumi 试穿结果',
@@ -44,11 +46,7 @@ export function GenerationSharePage({ token }: { token?: string }) {
   const saveToAlbum = async () => {
     if (!share || busy) return;
     if (share.developmentPreview || share.url.startsWith('data:')) {
-      await Taro.showModal({
-        title: '开发预览不可保存',
-        content: '当前链接来自本地 SVG 开发适配器，不是真实 AI 图片。接入生产模型和合法下载域名后，才支持保存到相册。',
-        showCancel: false,
-      });
+      setPreviewNoticeOpen(true);
       return;
     }
     setBusy(true);
@@ -92,6 +90,11 @@ export function GenerationSharePage({ token }: { token?: string }) {
           <Text className="generation-share-caption">点击右上角“…”可转发给微信好友</Text>
         </>
       )}
+      <ModalSheet open={previewNoticeOpen} title="开发预览不可保存" onClose={() => setPreviewNoticeOpen(false)}>
+        <Text className="generation-share-notice">
+          当前链接来自本地 SVG 开发适配器，不是真实 AI 图片。接入生产模型和合法下载域名后，才支持保存到相册。
+        </Text>
+      </ModalSheet>
     </View>
   );
 }

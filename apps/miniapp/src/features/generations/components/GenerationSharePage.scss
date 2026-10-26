@@ -25,3 +25,12 @@
   font-size: 22px;
   text-align: center;
 }
+
+.generation-share-notice {
+  display: block;
+  color: var(--lumi-color-ink);
+  font-size: 28px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
