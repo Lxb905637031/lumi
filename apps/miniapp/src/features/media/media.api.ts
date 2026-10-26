@@ -1,6 +1,7 @@
-import type { CreateMediaAssetInput, MediaAsset, MediaUploadReservation, SystemBootstrap } from '@lumi/contracts';
+import type { MediaAsset, MediaUploadReservation, SystemBootstrap } from '@lumi/contracts';
 import Taro from '@tarojs/taro';
 import { getSessionEpoch, request } from '../../services/http-client';
+import { imageMimeType } from './image-file';
 
 const pendingUploads = new Map<string, { key: string; assetId?: string; uploaded: boolean; expiresAt: number }>();
 export type MediaUploadProgress = { phase: 'uploading' | 'processing'; percent?: number };
@@ -25,9 +26,7 @@ export async function uploadImage(
       fail: reject,
     });
   });
-  const extension = filePath.split('.').pop()?.toLowerCase();
-  const mimeType: CreateMediaAssetInput['mimeType'] =
-    extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+  const mimeType = imageMimeType(filePath);
   return request<MediaAsset>('/media/assets', {
     method: 'POST',
     data: { fileName: filePath.split('/').pop() ?? 'upload.jpg', mimeType, base64 },
@@ -43,9 +42,7 @@ async function uploadPrivateImage(
   if (!('size' in file)) throw new Error('无法读取所选图片，请重新选择');
   const { size } = file;
   if (size < 1 || size > maxBytes) throw new Error('请选择不超过 5MiB 的图片');
-  const extension = filePath.split('.').pop()?.toLowerCase();
-  const mimeType: CreateMediaAssetInput['mimeType'] =
-    extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+  const mimeType = imageMimeType(filePath);
   const now = Date.now();
   for (const [path, value] of pendingUploads) if (value.expiresAt <= now) pendingUploads.delete(path);
   const cacheKey = `${getSessionEpoch()}:${filePath}`;
