@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import type { Notification } from '@lumi/contracts';
 import { AppButton } from '../../../components/ui/AppButton/AppButton';
 import { InlineFeedback } from '../../../components/ui/InlineFeedback/InlineFeedback';
+import { ModalSheet } from '../../../components/ui/ModalSheet/ModalSheet';
 import { ResourceStatus } from '../../../components/ui/ResourceStatus/ResourceStatus';
 import { useCursorList } from '../../../hooks/useCursorList';
 import {
@@ -20,6 +21,7 @@ export function NotificationCenter() {
   const list = useCursorList(listNotifications);
   const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
+  const [detail, setDetail] = useState<{ title: string; body: string; nextUrl?: string }>();
   const busy = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -58,15 +60,20 @@ export function NotificationCenter() {
       await list.reload();
       if (!current()) return;
       if (destination.kind === 'UNAVAILABLE') {
-        await Taro.showModal({ title: '消息详情', content: destination.message, showCancel: false });
+        setDetail({ title: '消息详情', body: destination.message });
         return;
       }
       if (destination.kind === 'ANNOUNCEMENT') {
-        await Taro.showModal({ title: destination.title, content: destination.body, showCancel: false });
+        setDetail({ title: destination.title, body: destination.body });
         return;
       }
       if (destination.kind === 'POST' && destination.notice) {
-        await Taro.showModal({ title: '评论状态已更新', content: destination.notice, showCancel: false });
+        setDetail({
+          title: '评论状态已更新',
+          body: destination.notice,
+          nextUrl: notificationUrl(destination) ?? undefined,
+        });
+        return;
       }
       const url = notificationUrl(destination);
       if (url && current()) await Taro.navigateTo({ url });
@@ -111,6 +118,26 @@ export function NotificationCenter() {
           更多消息
         </AppButton>
       )}
+      <ModalSheet
+        open={Boolean(detail)}
+        title={detail?.title ?? ''}
+        footer={
+          detail?.nextUrl ? (
+            <AppButton block variant="primary" onClick={() => closeDetail(true)}>
+              查看原帖
+            </AppButton>
+          ) : undefined
+        }
+        onClose={() => closeDetail(false)}
+      >
+        <Text className="profile-notification-detail">{detail?.body ?? ''}</Text>
+      </ModalSheet>
     </View>
   );
+
+  function closeDetail(continueToDestination: boolean) {
+    const nextUrl = detail?.nextUrl;
+    setDetail(undefined);
+    if (continueToDestination && nextUrl) void Taro.navigateTo({ url: nextUrl });
+  }
 }
