@@ -1,9 +1,19 @@
 import type { MediaAsset, MediaUploadReservation, SystemBootstrap } from '@lumi/contracts';
 import Taro from '@tarojs/taro';
 import { getSessionEpoch, request } from '../../services/http-client';
+import { SingleFlight } from '../../services/single-flight';
 import { imageMimeType } from './image-file';
 
-const pendingUploads = new Map<string, { key: string; assetId?: string; uploaded: boolean; expiresAt: number }>();
+type PendingUpload = {
+  key: string;
+  assetId?: string;
+  uploaded: boolean;
+  expiresAt: number;
+  flight: SingleFlight<MediaAsset>;
+  listeners: Set<(progress: MediaUploadProgress) => void>;
+};
+
+const pendingUploads = new Map<string, PendingUpload>();
 export type MediaUploadProgress = { phase: 'uploading' | 'processing'; percent?: number };
 
 export function getMediaAsset(id: string): Promise<MediaAsset> {
@@ -48,39 +58,57 @@ async function uploadPrivateImage(
   const cacheKey = `${getSessionEpoch()}:${filePath}`;
   let state = pendingUploads.get(cacheKey);
   if (!state) {
-    state = { key: `upload-${now}-${Math.random().toString(36).slice(2)}`, uploaded: false, expiresAt: now + 240_000 };
+    state = {
+      key: `upload-${now}-${Math.random().toString(36).slice(2)}`,
+      uploaded: false,
+      expiresAt: now + 240_000,
+      flight: new SingleFlight<MediaAsset>(),
+      listeners: new Set(),
+    };
     pendingUploads.set(cacheKey, state);
   }
-  if (!state.uploaded) {
-    const reservation = await request<MediaUploadReservation>('/media/assets/uploads', {
-      method: 'POST',
-      data: {
-        fileName: filePath.split('/').pop() ?? 'upload.jpg',
-        mimeType,
-        byteSize: size,
-        idempotencyKey: state.key,
-      },
-    });
-    state.assetId = reservation.assetId;
-    if (reservation.expiresAt) state.expiresAt = new Date(reservation.expiresAt).getTime();
-    if (reservation.upload) {
-      onProgress?.({ phase: 'uploading', percent: 0 });
-      const task = Taro.uploadFile({
-        url: reservation.upload.url,
-        filePath,
-        name: 'file',
-        formData: reservation.upload.fields,
-        timeout: 60_000,
+  if (onProgress) state.listeners.add(onProgress);
+  const emit = (progress: MediaUploadProgress) => state?.listeners.forEach((listener) => listener(progress));
+  const promise = state.flight.run(async () => {
+    if (!state.uploaded) {
+      const reservation = await request<MediaUploadReservation>('/media/assets/uploads', {
+        method: 'POST',
+        data: {
+          fileName: filePath.split('/').pop() ?? 'upload.jpg',
+          mimeType,
+          byteSize: size,
+          idempotencyKey: state.key,
+        },
       });
-      task.onProgressUpdate(({ progress }) => onProgress?.({ phase: 'uploading', percent: progress }));
-      const response = await task;
-      if (response.statusCode !== 201) throw new Error('图片上传失败，请保留文件并重试');
+      state.assetId = reservation.assetId;
+      if (reservation.expiresAt) state.expiresAt = new Date(reservation.expiresAt).getTime();
+      if (reservation.upload) {
+        emit({ phase: 'uploading', percent: 0 });
+        const task = Taro.uploadFile({
+          url: reservation.upload.url,
+          filePath,
+          name: 'file',
+          formData: reservation.upload.fields,
+          timeout: 60_000,
+        });
+        task.onProgressUpdate(({ progress }) => emit({ phase: 'uploading', percent: progress }));
+        const response = await task;
+        if (response.statusCode !== 201) throw new Error('图片上传失败，请保留文件并重试');
+      }
+      state.uploaded = true;
     }
-    state.uploaded = true;
-  }
-  onProgress?.({ phase: 'processing' });
-  const asset = await request<MediaAsset>(`/media/assets/${state.assetId}/complete`, { method: 'POST' });
-  if (asset.status !== 'READY') throw new Error('图片尚未处理完成，请重试');
-  pendingUploads.delete(cacheKey);
-  return asset;
+    emit({ phase: 'processing' });
+    const asset = await request<MediaAsset>(`/media/assets/${state.assetId}/complete`, { method: 'POST' });
+    if (asset.status !== 'READY') throw new Error('图片尚未处理完成，请重试');
+    return asset;
+  });
+  void promise.then(
+    () => {
+      pendingUploads.delete(cacheKey);
+    },
+    () => undefined,
+  );
+  return promise.finally(() => {
+    if (onProgress) state.listeners.delete(onProgress);
+  });
 }
