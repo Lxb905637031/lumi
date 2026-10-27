@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { ScrollView, Text, View } from '@tarojs/components';
+import { Button, ScrollView, Text, View } from '@tarojs/components';
 import type { ReactNode } from 'react';
 import { createScrollLockController } from './scroll-lock';
 import './ModalSheet.scss';
@@ -34,9 +34,9 @@ export function ModalSheet({ open, title, children, footer, onClose }: ModalShee
       <View className="lumi-sheet__panel" onClick={(event) => event.stopPropagation()}>
         <View className="lumi-sheet__header">
           <Text className="lumi-sheet__title">{title}</Text>
-          <Text className="lumi-sheet__close" onClick={onClose}>
+          <Button className="lumi-sheet__close" plain aria-label="关闭" onClick={onClose}>
             ×
-          </Text>
+          </Button>
         </View>
         <ScrollView className="lumi-sheet__body" scrollY enhanced showScrollbar={false}>
           {children}
