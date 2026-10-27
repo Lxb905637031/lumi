@@ -50,4 +50,5 @@
 
 .lumi-sheet__footer {
   border-top: 1px solid #eadfe0;
+  padding-bottom: calc(18px + var(--lumi-safe-bottom, 0px));
 }
