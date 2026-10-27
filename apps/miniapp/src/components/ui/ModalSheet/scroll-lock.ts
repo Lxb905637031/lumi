@@ -7,6 +7,7 @@ export function createScrollLockController(
   target: {
     body?: { style: Record<string, string> };
     scrollY?: number;
+    getScrollY?: () => number;
     scrollTo?: (x: number, y: number) => void;
   } = {},
 ): ScrollLockController {
@@ -17,7 +18,7 @@ export function createScrollLockController(
     lock() {
       if (locked) return;
       locked = true;
-      previousScrollY = target.scrollY ?? 0;
+      previousScrollY = target.getScrollY?.() ?? target.scrollY ?? 0;
       if (!target.body) return;
       target.body.style.position = 'fixed';
       target.body.style.top = `-${previousScrollY}px`;

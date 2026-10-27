@@ -25,3 +25,21 @@ test('scroll lock is safe for the native runtime without a document', () => {
   assert.doesNotThrow(() => controller.lock());
   assert.doesNotThrow(() => controller.unlock());
 });
+
+test('scroll lock captures the current position when opened, not when the controller was created', () => {
+  const style: Record<string, string> = {};
+  const scrolls: number[] = [];
+  let currentScrollY = 0;
+  const controller = createScrollLockController({
+    body: { style },
+    getScrollY: () => currentScrollY,
+    scrollTo: (_x, y) => scrolls.push(y),
+  });
+
+  currentScrollY = 684;
+  controller.lock();
+  assert.equal(style.top, '-684px');
+  controller.unlock();
+
+  assert.deepEqual(scrolls, [684]);
+});

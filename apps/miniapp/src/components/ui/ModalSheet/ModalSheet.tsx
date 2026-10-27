@@ -17,7 +17,7 @@ export function ModalSheet({ open, title, children, footer, onClose }: ModalShee
     if (typeof document === 'undefined') return createScrollLockController();
     return createScrollLockController({
       body: { style: document.body.style as unknown as Record<string, string> },
-      scrollY: window.scrollY,
+      getScrollY: () => window.scrollY,
       scrollTo: (x, y) => window.scrollTo(x, y),
     });
   }, []);
